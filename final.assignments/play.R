@@ -40,3 +40,247 @@ whisky_data$Distillery <- as.factor(whisky_data$Distillery)
 str(whisky_data)
 levels(whisky_data$Descriptor)
 
+noclass_whisky <- subset(whisky_data, select = -c(Sample_no, Descriptor, Distillery))
+
+class_whisky <- subset(whisky_data, select = -c(Sample_no, Distillery))
+
+head(noclass_whisky)
+head(class_whisky)
+
+whiskyclass.melt <- melt(data= class_whisky,
+                    measure.vars = 2:11,
+                    variable.name = "Variable",
+                    value.name = "Value",
+                    id.vars = 1)
+
+str(whiskyclass.melt)
+head(whiskyclass.melt)
+
+#boxplots
+#unlogged, no class
+
+ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
+  geom_boxplot(aes(fill = Variable), notch = TRUE) +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "none") +
+  labs(x = "Chemical Elements", y = "Measured Values")
+
+#logged, no class
+
+ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
+  geom_boxplot(aes(fill = Variable), notch = TRUE) +
+  scale_y_log10() +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "none") +
+  labs(x = "Chemical Elements", y = "Measured Values")
+
+
+#no log, low fidelity, by class
+
+ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
+  geom_boxplot(aes(fill = Variable), notch = TRUE) +
+  facet_wrap(~ Descriptor, scales = "free") +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "none") +
+  labs(x = "Chemical Elements", y = "Measured Values")
+
+
+
+
+
+
+#log scale, by class
+
+ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
+  geom_boxplot(aes(fill = Variable), notch = TRUE) +
+  scale_y_log10() + 
+  facet_wrap(~ Descriptor, scales = "free") +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "none") +
+  labs(x = "Chemical Elements", y = "Measured Values")
+
+
+
+# Boxplot grouped by Descriptor
+ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
+  geom_boxplot(aes(fill = Descriptor), notch = TRUE) +
+  scale_y_log10() +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  labs(x = "Whisky Chemical Elements",           
+       y = "Measured Values",
+       fill = "Whisky Type")
+
+head(class_whisky)
+levels(class_whisky$Descriptor)
+
+#speyside vs blend
+(hotelling.test(subset(class_whisky, Descriptor=="Speyside")[,-c(1)],
+                subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
+
+#counterfeit vs blend
+(hotelling.test(subset(class_whisky, Descriptor=="Counterfeit")[,-c(1)],
+                subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
+
+#counterfeit vs blend
+(hotelling.test(subset(class_whisky, Descriptor=="Counterfeit")[,-c(1)],
+                subset(class_whisky, Descriptor =="Speyside")[,-c(1)]))
+
+#counterfeit vs blend
+(hotelling.test(subset(class_whisky, Descriptor=="Island")[,-c(1)],
+                subset(class_whisky, Descriptor =="Speyside")[,-c(1)]))
+
+#counterfeit vs blend
+(hotelling.test(subset(class_whisky, Descriptor=="Island")[,-c(1)],
+                subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
+
+
+###########
+#corr test
+
+ggcorrplot(cor(class_whisky[,-(1)]),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte, 
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
+
+
+####mahalbanobis
+
+mu.hat.w <- colMeans(noclass_whisky)
+mu.hat.w
+
+sigma.hat.w <- cov(noclass_whisky)
+sigma.hat.w
+
+dMw <- mahalanobis(noclass_whisky, center=mu.hat.w, cov=sigma.hat.w)
+
+str(noclass_whisky)
+
+upper.quantiles.w <- qchisq(c(.9, .95, .99), df=11)
+density.at.quantiles.w <- dchisq(x=upper.quantiles.w, df=11)
+cut.points.w <- data.frame(upper.quantiles.w, density.at.quantiles.w)
+
+
+ggplot(data.frame(dMw), aes(x=dMw)) +
+  geom_histogram(aes(y=after_stat(density)), bins=nclass.FD(dMw),
+                 fill="white", col="black") +
+  geom_rug() +
+  stat_function(fun=dchisq, args = list(df=11),
+                col="firebrick", size=1.5, alpha=.7, xlim=c(0,25)) +
+  geom_segment(data=cut.points.w,
+               aes(x=upper.quantiles.w, xend=upper.quantiles.w,
+                   y=rep(0,3), yend=density.at.quantiles.w),
+               col="navy", size=2) +
+  xlab("Mahalanobis distances and cut points") +
+  ylab("Histogram and density")
+
+
+#table
+
+noclass_whisky2 <- noclass_whisky
+
+noclass_whisky2$dMw <- dMw
+
+noclass_whisky2$surprise <- cut(noclass_whisky2$dMw,
+                           breaks= c(0, upper.quantiles.w, Inf),
+                           labels=c("Typical", "Somewhat", "Surprising", "Very"))
+
+surprise_summaryw <- table(noclass_whisky2$surprise) 
+surprise_summaryw
+
+surprise_df <- data.frame(
+  Category = names(surprise_summaryw),           
+  Count = as.numeric(surprise_summaryw),       
+  Percentage = round(100 * as.numeric(surprise_summaryw) / sum(surprise_summaryw), 1) 
+)
+
+#surprise observation dataframe
+surprise_df
+
+#more detailed surprise observation
+noclass_whisky2$surprise_detailed <- cut(dMw,
+                                         breaks = c(0, 
+                                                    qchisq(0.5, df=ncol(noclass_whisky)),   # 50%
+                                                    qchisq(0.75, df=ncol(noclass_whisky)),  # 75%
+                                                    qchisq(0.9, df=ncol(noclass_whisky)),   # 90%
+                                                    qchisq(0.95, df=ncol(noclass_whisky)),  # 95%
+                                                    qchisq(0.99, df=ncol(noclass_whisky)),  # 99%
+                                                    Inf),
+                                         labels = c("Bottom_50%", "50-75%", "75-90%", 
+                       
+                                                                                 "90-95%", "95-99%", "Top_1%"))
+print(table(noclass_whisky2$surprise_detailed))
+
+cat("\nSummary of Mahalanobis distances by surprise level:\n")
+by(dMw, noclass_whisky2$surprise, summary)
+
+surprise_summary.w <- table(noclass_whisky2$surprise_detailed) 
+
+surprise_df.w <- data.frame(
+  Category = names(surprise_summary.w),           
+  Count = as.numeric(surprise_summary.w),       
+  Percentage = round(100 * as.numeric(surprise_summary.w) / sum(surprise_summary.w), 1) 
+)
+surprise_df.w
+
+head(noclass_whisky2)
+
+#pairs (didnt work likely from too few obs)
+ggpairs(noclass_whisky2, columns=1:11,
+        ggplot2::aes(col=surprise, alpha=.5),
+        upper = list(continuous = "density", combo = "box_no_facet")) +
+  ggplot2::scale_color_manual(values=c("lightgray", "green", "blue", "red")) +
+  ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
+
+
+######################################
+#PCA
+
+#non-logged
+
+PCA.whisky.scaled <- prcomp(class_whisky[,-(1)], center = TRUE, scale = TRUE)
+whisky.pca.summary <- summary(PCA.whisky.scaled)
+kable(whisky.pca.summary$importance, caption = "Standardized PCA Summary", digits = 4)%>%
+  kable_styling(latex_options = "hold_position")
+
+
+#logged, as in paper
+
+logged.c.whisky <- log(class_whisky[,-(1)])
+
+head(logged.c.whisky)
+
+#slightly different, will investigate (PC1 0.4694 vs 0.476, PC2 0.2369 vs 0.212)
+PCA.whisky.log <- prcomp(logged.c.whisky[,-(1)], center = TRUE, scale = TRUE)
+log.whisky.summary <- summary(PCA.whisky.log)
+kable(log.whisky.summary$importance, caption = "Standardized PCA Summary", digits = 4)%>%
+  kable_styling(latex_options = "hold_position")
+
+#plot
+
+plot(PCA.whisky.log, type="l")
+
+#eigenvectors/pc components
+
+PCA.whisky.log$rotation
+
+#biplot, logged, more clarity
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = (class_whisky$Descriptor), ellipse = TRUE)
+
+#unlogged
+ggbiplot(PCA.whisky.scaled, obs.scale = 1, var.scale = 1,
+         groups = (class_whisky$Descriptor), ellipse = TRUE)
+
+
+

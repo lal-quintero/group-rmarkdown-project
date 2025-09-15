@@ -1,0 +1,43 @@
+---
+title: "Group_scotch_Project"
+author: "Levi Quintero, "
+date: "2025-09-15"
+output: bookdown::pdf_document2
+
+
+header-includes:
+    - \usepackage{bbm}
+    - \usepackage{float}
+    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(300568257, kind="Mersenne-Twister")
+
+library(patchwork)
+library(ggplot2)
+library(ggpubr)
+library(GGally)
+library(ggbiplot)
+library(ggcorrplot)
+library(extrafont)
+library(matlib)
+library(bookdown)
+library(RColorBrewer)
+library(ggpubr)
+library(ggthemes)
+  theme_set(theme_pander())
+library(extrafont)
+  library(knitr)
+library(kableExtra)
+library(gridExtra)
+library(grid)
+library(dplyr)
+library(reshape2)
+library(Hotelling)
+  library(mvtnorm)
+  library(ggExtra)
+
+```

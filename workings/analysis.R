@@ -1,3 +1,34 @@
+
+library(patchwork)
+library(ggplot2)
+library(ggpubr)
+library(GGally)
+library(ggbiplot)
+library(ggcorrplot)
+library(extrafont)
+library(matlib)
+library(bookdown)
+library(RColorBrewer)
+library(ggpubr)
+library(ggthemes)
+library(extrafont)
+library(knitr)
+library(kableExtra)
+library(gridExtra)
+library(grid)
+library(dplyr)
+library(reshape2)
+library(Hotelling)
+library(mvtnorm)
+library(ggExtra)
+library(reshape2)
+library(plotly)
+
+
+#after EDA, it appears using logged data reduces multivariate outliers,
+#confirms normality of multivar dist, allows better distinction in
+#PCA loading directionality -> used for kmeans/medoids modelling
+
 # Create the whisky data as a dataframe
 whisky_data <- data.frame(
   Sample_no = c("1", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a", "12a", "13a", "14a", "15a", "16", "17", "18a", "19", "20a", "21", "22a", "23a", "24", "25", "26", "27", "28", "29", "30", "31", "32"),
@@ -40,6 +71,7 @@ whisky_data$Distillery <- as.factor(whisky_data$Distillery)
 str(whisky_data)
 levels(whisky_data$Descriptor)
 
+#subset data for handling
 noclass_whisky <- subset(whisky_data, select = -c(Sample_no, Descriptor, Distillery))
 
 class_whisky <- subset(whisky_data, select = -c(Sample_no, Distillery))
@@ -47,8 +79,9 @@ class_whisky <- subset(whisky_data, select = -c(Sample_no, Distillery))
 head(noclass_whisky)
 head(class_whisky)
 
+#melt for boxplots
 whiskyclass.melt <- melt(data= class_whisky,
-                         measure.vars = 2:11,
+                         measure.vars = 2:12,
                          variable.name = "Variable",
                          value.name = "Value",
                          id.vars = 1)
@@ -77,74 +110,61 @@ ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
   labs(x = "Chemical Elements", y = "Measured Values")
 
 
-#no log, low fidelity, by class
+##########################################################################
 
-ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
+# Boxplot faceted by Descriptor
+#expand in another window
+#note P, Cl, Mn, Cu, Rb - good candidates for separating at least 2 groups
+
+#log scale
+
+ggplot(data = whiskyclass.melt, aes(x = Descriptor, y = Value)) +
   geom_boxplot(aes(fill = Variable), notch = TRUE) +
-  facet_wrap(~ Descriptor, scales = "free") +
-  scale_fill_brewer(palette = "Dark2") +
+  scale_y_log10() +
+  facet_wrap(~ Variable, scales = "free") +
+  # scale_fill_brewer(palette = "Dark2") +
   theme_pubclean() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
         legend.position = "none") +
   labs(x = "Chemical Elements", y = "Measured Values")
 
 
+######################################################
 
-
-
-
-#log scale, by class
-
-ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
-  geom_boxplot(aes(fill = Variable), notch = TRUE) +
-  scale_y_log10() +
-  facet_wrap(~ Descriptor, scales = "free") +
-  scale_fill_brewer(palette = "Dark2") +
-  theme_pubclean() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.position = "none") +
-  labs(x = "Chemical Elements", y = "Measured Values")
-
-
-
-# Boxplot grouped by Descriptor
-ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
-  geom_boxplot(aes(fill = Descriptor), notch = TRUE) +
-  scale_y_log10() +
-  scale_fill_brewer(palette = "Dark2") +
-  theme_pubclean() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  labs(x = "Whisky Chemical Elements",
-       y = "Measured Values",
-       fill = "Whisky Type")
+#mean vector tests
+#cov tests
 
 head(class_whisky)
 levels(class_whisky$Descriptor)
 
-#speyside vs blend
+#speyside vs blend, dif mean vectors
 (hotelling.test(subset(class_whisky, Descriptor=="Speyside")[,-c(1)],
                 subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
 
-#counterfeit vs blend
+#counterfeit vs blend, dif mean vectors
 (hotelling.test(subset(class_whisky, Descriptor=="Counterfeit")[,-c(1)],
                 subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
 
-#counterfeit vs blend
+#counterfeit vs speyside, weak evidence dif mean vectors
 (hotelling.test(subset(class_whisky, Descriptor=="Counterfeit")[,-c(1)],
                 subset(class_whisky, Descriptor =="Speyside")[,-c(1)]))
 
-#counterfeit vs blend
+#island vs blend
 (hotelling.test(subset(class_whisky, Descriptor=="Island")[,-c(1)],
                 subset(class_whisky, Descriptor =="Speyside")[,-c(1)]))
 
-#counterfeit vs blend
+#counterfeit vs blend, no dif mean vectors
 (hotelling.test(subset(class_whisky, Descriptor=="Island")[,-c(1)],
                 subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
+
+#do a variance test as well to rule out LDA
 
 
 ###########
 #corr test
+#high corr among k-rb, p -rb, Mn-K; K may display the most redundant info
 
+#unlogged
 ggcorrplot(cor(class_whisky[,-(1)]),
            method = "square",
            lab=TRUE,
@@ -153,6 +173,21 @@ ggcorrplot(cor(class_whisky[,-(1)]),
            hc.order = TRUE,
            type = "lower")
 
+#logged
+ggcorrplot(cor(log(class_whisky[,-(1)])),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte,
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
+
+
+
+
+
+###################################################################
+#unlogged#, has extrem ebservations not meeting multivar normal dist
 
 ####mahalbanobis
 
@@ -185,7 +220,7 @@ ggplot(data.frame(dMw), aes(x=dMw)) +
   ylab("Histogram and density")
 
 
-#table
+#mahalabanobis table
 
 noclass_whisky2 <- noclass_whisky
 
@@ -205,6 +240,7 @@ surprise_df <- data.frame(
 )
 
 #surprise observation dataframe
+
 surprise_df
 
 #more detailed surprise observation
@@ -219,10 +255,11 @@ noclass_whisky2$surprise_detailed <- cut(dMw,
                                          labels = c("Bottom_50%", "50-75%", "75-90%",
 
                                                     "90-95%", "95-99%", "Top_1%"))
+
+
+#more detailed look at suprising observations
 print(table(noclass_whisky2$surprise_detailed))
 
-cat("\nSummary of Mahalanobis distances by surprise level:\n")
-by(dMw, noclass_whisky2$surprise, summary)
 
 surprise_summary.w <- table(noclass_whisky2$surprise_detailed)
 
@@ -235,18 +272,132 @@ surprise_df.w
 
 head(noclass_whisky2)
 
-#pairs (didnt work likely from too few obs)
-ggpairs(noclass_whisky2, columns=1:11,
+#########################################33
+#pairs, had to exclude single somewhat suprising obs for denisty plotting
+ggpairs(noclass_whisky2[noclass_whisky2$surprise != "Somewhat", ], columns=1:11,
         ggplot2::aes(col=surprise, alpha=.5),
         upper = list(continuous = "density", combo = "box_no_facet")) +
-  ggplot2::scale_color_manual(values=c("lightgray", "green", "blue", "red")) +
+  ggplot2::scale_color_manual(values=c("green", "blue", "red")) +
   ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
 
 
 ######################################
+
+
+
+#logged#
+
+####mahalbanobis
+
+nc_whisky.log <- log(noclass_whisky)
+
+mu.hat.l <- colMeans(nc_whisky.log)
+mu.hat.l
+
+
+sigma.hat.l <- cov(nc_whisky.log)
+sigma.hat.l
+
+l.dMw <- mahalanobis(nc_whisky.log, center=mu.hat.l, cov=sigma.hat.l)
+
+str(nc_whisky.log)
+
+upper.quantiles.w <- qchisq(c(.9, .95, .99), df=11)
+density.at.quantiles.w <- dchisq(x=upper.quantiles.w, df=11)
+cut.points.w <- data.frame(upper.quantiles.w, density.at.quantiles.w)
+
+
+ggplot(data.frame(l.dMw), aes(x=l.dMw)) +
+  geom_histogram(aes(y=after_stat(density)), bins=nclass.FD(l.dMw),
+                 fill="white", col="black") +
+  geom_rug() +
+  stat_function(fun=dchisq, args = list(df=11),
+                col="firebrick", size=1.5, alpha=.7, xlim=c(0,25)) +
+  geom_segment(data=cut.points.w,
+               aes(x=upper.quantiles.w, xend=upper.quantiles.w,
+                   y=rep(0,3), yend=density.at.quantiles.w),
+               col="navy", size=2) +
+  xlab("Mahalanobis distances and cut points") +
+  ylab("Histogram and density")
+
+
+#mahalabanobis table
+
+nc_whisky.log2 <- nc_whisky.log
+
+nc_whisky.log2$dMw <- l.dMw
+
+nc_whisky.log2$surprise <- cut(nc_whisky.log2$dMw,
+                               breaks= c(0, upper.quantiles.w, Inf),
+                               labels=c("Typical", "Somewhat", "Surprising", "Very"))
+
+log_surprise_sum <- table(nc_whisky.log2$surprise)
+log_surprise_sum
+
+log.surprise_df <- data.frame(
+  Category = names(log_surprise_sum),
+  Count = as.numeric(log_surprise_sum),
+  Percentage = round(100 * as.numeric(log_surprise_sum) / sum(log_surprise_sum), 1)
+)
+
+#surprise observation dataframe
+#multivar normalacy achieved
+log.surprise_df
+
+#more detailed surprise observation
+nc_whisky.log2$surprise_detailed <- cut(l.dMw,
+                                        breaks = c(0,
+                                                   qchisq(0.5, df=ncol(noclass_whisky)),   # 50%
+                                                   qchisq(0.75, df=ncol(noclass_whisky)),  # 75%
+                                                   qchisq(0.9, df=ncol(noclass_whisky)),   # 90%
+                                                   qchisq(0.95, df=ncol(noclass_whisky)),  # 95%
+                                                   qchisq(0.99, df=ncol(noclass_whisky)),  # 99%
+                                                   Inf),
+                                        labels = c("Bottom_50%", "50-75%", "75-90%",
+
+                                                   "90-95%", "95-99%", "Top_1%"))
+print(table(nc_whisky.log2$surprise_detailed))
+
+
+det.logsuprise <- table(nc_whisky.log2$surprise_detailed)
+
+log.supr_df.2 <- data.frame(
+  Category = names(det.logsuprise),
+  Count = as.numeric(det.logsuprise),
+  Percentage = round(100 * as.numeric(det.logsuprise) / sum(det.logsuprise), 1)
+)
+log.supr_df.2
+
+
+
+#########################################33
+#here we can see more normal dist
+
+filtered_data <- nc_whisky.log2 %>%
+  filter(!surprise %in% c("Surprising", "Very"))
+
+ggpairs(filtered_data, columns=1:11,
+        ggplot2::aes(col=surprise, alpha=.5),
+        upper = list(continuous = wrap("density", mapping = aes(fill=surprise), alpha=0.3)),
+        lower = list(continuous = wrap("points", alpha=0.7))) +
+  ggplot2::scale_color_manual(values=c("gray", "orange")) +
+  ggplot2::scale_fill_manual(values=c("gray", "orange")) +
+  ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
+#####################################
+
+
+
+
+
+
+
+
+
+
 #PCA
 
 #non-logged
+head(class_whisky)
 
 PCA.whisky.scaled <- prcomp(class_whisky[,-(1)], center = TRUE, scale = TRUE)
 whisky.pca.summary <- summary(PCA.whisky.scaled)
@@ -256,28 +407,298 @@ kable(whisky.pca.summary$importance, caption = "Standardized PCA Summary", digit
 
 #logged, as in paper
 
-logged.c.whisky <- log(class_whisky[,-(1)])
+logged.c.whisky <- class_whisky
+logged.c.whisky[,-1] <- log(class_whisky[,-1])
+head(logged.c.whisky)
+
 
 head(logged.c.whisky)
 
 #slightly different, will investigate (PC1 0.4694 vs 0.476, PC2 0.2369 vs 0.212)
+#provides more accounting of variation within the first principal components
+
 PCA.whisky.log <- prcomp(logged.c.whisky[,-(1)], center = TRUE, scale = TRUE)
 log.whisky.summary <- summary(PCA.whisky.log)
 kable(log.whisky.summary$importance, caption = "Standardized PCA Summary", digits = 4)%>%
   kable_styling(latex_options = "hold_position")
 
 #plot
+plot(PCA.whisky.scaled, type="l")
 
 plot(PCA.whisky.log, type="l")
 
 #eigenvectors/pc components
-
+#generally positive, approximate equal loadoings for first PCA component
+#generally negative loadings for second pca component
+#PC3 shows general class differentaition begining with pos/neg loadings
 PCA.whisky.log$rotation
 
 #biplot, logged, more clarity
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
          groups = (class_whisky$Descriptor), ellipse = TRUE)
 
-#unlogged
+#triplot
+
+# Extract PC scores
+pc_scores <- data.frame(PCA.whisky.log$x[,1:3])
+pc_scores$groups <- class_whisky$Descriptor  # or your grouping variable
+
+# Create interactive 3D plot
+p1 <- plot_ly(pc_scores,
+              x = ~PC1, y = ~PC2, z = ~PC3,
+              color = ~groups,
+              type = 'scatter3d',
+              mode = 'markers',
+              marker = list(size = 5)) %>%
+  layout(title = "3D PCA Plot - First 3 Components",
+         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
+                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
+                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
+
+print(p1)
+
+#unlogged biplot
 ggbiplot(PCA.whisky.scaled, obs.scale = 1, var.scale = 1,
          groups = (class_whisky$Descriptor), ellipse = TRUE)
+
+
+
+#############################################################
+
+#kmeans
+
+
+############################################################
+#############################################################
+
+kmeans_scotch.func <- function(data){
+  results <- list()
+  for (i in 1:10){
+    results[[as.character(i)]] <- kmeans(data,
+                                         algorithm="MacQueen",
+                                         centers=i, iter.max = 100, nstart = 50)
+
+  }
+
+  wss <- sapply(results, function(x) sum(x$withinss))
+
+  return(list(km_results = results, wss = wss))
+}
+
+scotch.kmean <- erupt.func(logged.c.whisky[,-1])
+
+wss.scotch <- data.frame(y = scotch.kmean$wss, x = c(1:10))
+
+ggplot(wss.scotch, aes(x = x, y = y)) +
+  geom_point(color = "black", size = 3) +
+  geom_line(linetype = "solid", color = "black") +
+  theme_tufte() +
+  geom_vline(xintercept = 3, linetype = "dashed", color = "red", linewidth = 1) +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 109.43011, ymax = 161.11470, alpha = 0.3, fill = "indianred") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 109.43011, ymax = 45.42382, alpha = 0.2, fill = "coral") +
+  theme_tufte() +
+  scale_x_continuous(limits = c(1, 10), breaks = 1:10) +  # set ticks 1 to 10
+  scale_y_continuous(limits = c(0, 300)) +
+  labs(
+    y = "Total Within Sum of Squares (WSS)",
+    x = "Number of Clusters (K)"
+  ) +
+  theme(axis.text = element_text(angle =45, size = 10),
+        axis.text.x = element_text(face = "italic"))
+
+#intraclass var scores
+wss.scotch
+
+#summary
+(scotch.kmean$km_results$`3`)
+(scotch.kmean$km_results$`4`)
+
+
+#silhouettes
+kmean.w.sil3 <- silhouette(scotch.kmean$km_results$`3`$cluster, dist(logged.c.whisky[,-1]))
+kmean.sum.3 <- round(summary(kmean.w.sil3 [,3]),3)
+
+#generally decent clustering, except 2 = 0.19
+plot(kmean.w.sil3,main = "K = 3", border=NA)
+
+
+kmean.w.sil4 <- silhouette(scotch.kmean$km_results$`4`$cluster, dist(logged.c.whisky[,-1]))
+kmean.sum.4 <- round(summary(kmean.w.sil4 [,3]),3)
+
+#weaker clustering among 1 and 2
+plot(kmean.w.sil4,main = "K = 4", border=NA)
+
+
+sil_sum.1 <-data.frame(stat = names(kmean.sum.3), k3 = as.numeric(kmean.sum.3), k4 = as.numeric(kmean.sum.4))
+
+
+kable(sil_sum.1, caption = "Silhouette Width summary statistics for k = 3 and k =4", float = "H")%>%
+  kable_styling(latex_options = "hold_position")
+
+###########biplots all 3-4 using kmeans
+
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = (scotch.kmean$km_results$`4`$cluster), ellipse = TRUE)
+
+
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = (scotch.kmean$km_results$`3`$cluster), ellipse = TRUE)
+
+
+
+#triplot of 3
+#assign kmeans groups, 3
+pc_scores$groups2 <- scotch.kmean$km_results$`3`$cluster  # or your grouping variable
+
+# Create plot
+p2 <- plot_ly(pc_scores,
+              x = ~PC1, y = ~PC2, z = ~PC3,
+              color = ~groups2,
+              type = 'scatter3d',
+              mode = 'markers',
+              marker = list(size = 5)) %>%
+  layout(title = "3D PCA Plot - First 3 Components",
+         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
+                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
+                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
+
+print(p2)
+
+
+
+#triplot 3, kmeans = 4
+
+pc_scores$groups3 <- scotch.kmean$km_results$`4`$cluster  # or your grouping variable
+
+# Create interactive 3D plot
+p3 <- plot_ly(pc_scores,
+              x = ~PC1, y = ~PC2, z = ~PC3,
+              color = ~groups3,
+              type = 'scatter3d',
+              mode = 'markers',
+              marker = list(size = 5)) %>%
+  layout(title = "3D PCA Plot - First 3 Components",
+         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
+                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
+                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
+
+print(p3)
+
+
+
+############################################################
+#pam cluster analysis
+
+
+
+library(cluster)
+
+kmedoid_scotch.func <- function(data, k_max = 10) {
+  pam_fit <- list()
+  wss <- numeric(k_max)        # preallocate
+  sil_width <- numeric(k_max)  # preallocate
+
+  for (i in 2:k_max) { # PAM doesn't work with k=1
+    pam_fit[[as.character(i)]] <- pam(data, k = i)
+
+    # within-cluster dissimilarity (objective function)
+    wss[i] <- pam_fit[[as.character(i)]]$objective[2]
+
+    # average silhouette width
+    sil_width[i] <- pam_fit[[as.character(i)]]$silinfo$avg.width
+  }
+
+  return(list(pam_fit = pam_fit, wss = wss, silhouette = sil_width))
+}
+
+pam.scotch <- kmedoid_scotch.func(logged.c.whisky[,-1])
+
+summary(pam.scotch$pam_fit$`3`)
+summary(pam.scotch$pam_fit$`4`)
+
+
+###pam1 function, allejondro helped with
+
+# Ideally, try several distances and estimate the "optimum" number of classes
+# Use that number of clusters, and repeat the visualisation per cluster
+
+pam1 <- cluster::pam(class_whisky[,2:12], k=4)
+
+
+summary(pam1)
+
+#biplots
+
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = (pam.scotch$pam_fit$`2`$clustering), ellipse = TRUE)
+
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = (pam.scotch$pam_fit$`3`$clustering), ellipse = TRUE)
+
+#both kmeans and pam point to 3-4 groups for optimum clustering
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = (pam.scotch$pam_fit$`4`$clustering), ellipse = TRUE)
+
+#triplot 4, PAM = 3
+
+pc_scores$groups4 <- pam.scotch$pam_fit$`3`$clustering
+
+# Create interactive 3D plot
+p4 <- plot_ly(pc_scores,
+              x = ~PC1, y = ~PC2, z = ~PC3,
+              color = ~groups4,
+              type = 'scatter3d',
+              mode = 'markers',
+              marker = list(size = 5)) %>%
+  layout(title = "3D PCA Plot - First 3 Components",
+         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
+                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
+                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
+
+print(p4)
+
+
+
+
+#triplot 4, PAM = 3
+
+pc_scores$groups5 <- pam.scotch$pam_fit$`4`$clustering
+
+# Create interactive 3D plot
+p5 <- plot_ly(pc_scores,
+              x = ~PC1, y = ~PC2, z = ~PC3,
+              color = ~groups5,
+              type = 'scatter3d',
+              mode = 'markers',
+              marker = list(size = 5)) %>%
+  layout(title = "3D PCA Plot - First 3 Components",
+         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
+                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
+                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
+
+print(p5)
+######################################################
+
+#silhouette plots
+#silhouettes
+pam.w.sil3 <- silhouette(pam.scotch$pam_fit$`3`$clustering, dist(logged.c.whisky[,-1]))
+pam.sum.3 <- round(summary(pam.w.sil3 [,3]),3)
+
+#generally decent clustering
+plot(pam.w.sil3,main = "K = 3", border=NA)
+
+
+pam.w.sil4 <- silhouette(pam.scotch$pam_fit$`4`$clustering, dist(logged.c.whisky[,-1]))
+pam.sum.4 <- round(summary(pam.w.sil4 [,3]),3)
+
+#generally decent clustering
+plot(pam.w.sil4,main = "K = 4", border=NA)
+
+
+sil_sum.2 <-data.frame(stat = names(pam.sum.3), k3 = as.numeric(pam.sum.3), k4 = as.numeric(pam.sum.4))
+
+
+kable(sil_sum.2, caption = "Silhouette Width summary statistics for k = 3 and k =4", float = "H")%>%
+  kable_styling(latex_options = "hold_position")
+
+

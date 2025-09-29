@@ -23,6 +23,7 @@ library(mvtnorm)
 library(ggExtra)
 library(reshape2)
 library(plotly)
+library(cluster)
 
 
 #after EDA, it appears using logged data reduces multivariate outliers,
@@ -79,6 +80,11 @@ class_whisky <- subset(whisky_data, select = -c(Sample_no, Distillery))
 head(noclass_whisky)
 head(class_whisky)
 
+#logged as in paper
+logged.c.whisky <- class_whisky
+logged.c.whisky[,-1] <- log(class_whisky[,-1])
+head(logged.c.whisky)
+
 #melt for boxplots
 whiskyclass.melt <- melt(data= class_whisky,
                          measure.vars = 2:12,
@@ -114,7 +120,8 @@ ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
 
 # Boxplot faceted by Descriptor
 #expand in another window
-#note P, Cl, Mn, Cu, Rb - good candidates for separating at least 2 groups
+#note P, Cl, Mn, Cu, Rb,K
+#- good candidates for separating at least 2 groups
 
 #log scale
 
@@ -134,30 +141,39 @@ ggplot(data = whiskyclass.melt, aes(x = Descriptor, y = Value)) +
 #mean vector tests
 #cov tests
 
+logged.c.whisky
+
+
 head(class_whisky)
 levels(class_whisky$Descriptor)
 
 #speyside vs blend, dif mean vectors
-(hotelling.test(subset(class_whisky, Descriptor=="Speyside")[,-c(1)],
-                subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
+(hotelling.test(subset(logged.c.whisky, Descriptor=="Speyside")[,-c(1)],
+                subset(logged.c.whisky, Descriptor =="Blend")[,-c(1)]))
 
 #counterfeit vs blend, dif mean vectors
-(hotelling.test(subset(class_whisky, Descriptor=="Counterfeit")[,-c(1)],
-                subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
+(hotelling.test(subset(logged.c.whisky, Descriptor=="Counterfeit")[,-c(1)],
+                subset(logged.c.whisky, Descriptor =="Blend")[,-c(1)]))
 
-#counterfeit vs speyside, weak evidence dif mean vectors
-(hotelling.test(subset(class_whisky, Descriptor=="Counterfeit")[,-c(1)],
-                subset(class_whisky, Descriptor =="Speyside")[,-c(1)]))
+#counterfeit vs speyside, evidence dif mean vectors
+(hotelling.test(subset(logged.c.whisky, Descriptor=="Counterfeit")[,-c(1)],
+                subset(logged.c.whisky, Descriptor =="Speyside")[,-c(1)]))
 
-#island vs blend
-(hotelling.test(subset(class_whisky, Descriptor=="Island")[,-c(1)],
-                subset(class_whisky, Descriptor =="Speyside")[,-c(1)]))
+#island vs speyside (ie no dif in provenence)
+(hotelling.test(subset(logged.c.whisky, Descriptor=="Island")[,-c(1)],
+                subset(logged.c.whisky, Descriptor =="Speyside")[,-c(1)]))
 
-#counterfeit vs blend, no dif mean vectors
-(hotelling.test(subset(class_whisky, Descriptor=="Island")[,-c(1)],
-                subset(class_whisky, Descriptor =="Blend")[,-c(1)]))
+
+
+
 
 #do a variance test as well to rule out LDA
+
+
+
+var.test(subset(logged.c.whisky, Descriptor=="Speyside")$Mn,
+         subset(logged.c.whisky, Descriptor=="Counterfeit")$Mn,
+         alternative = "two.sided")
 
 
 ###########
@@ -183,6 +199,36 @@ ggcorrplot(cor(log(class_whisky[,-(1)])),
            type = "lower")
 
 
+#speyside
+speyside_data <- subset(logged.c.whisky, class_whisky[,1] == "Speyside")
+
+ggcorrplot(cor(speyside_data[,-1]),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte,
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
+
+counterfeit_data <- subset(logged.c.whisky, class_whisky[,1] == "Counterfeit")
+
+ggcorrplot(cor(counterfeit_data[,-1]),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte,
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
+
+blend_data <- subset(logged.c.whisky, class_whisky[,1] == "Blend")
+
+ggcorrplot(cor(blend_data[,-1]),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte,
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
 
 
 
@@ -277,10 +323,12 @@ head(noclass_whisky2)
 ggpairs(noclass_whisky2[noclass_whisky2$surprise != "Somewhat", ], columns=1:11,
         ggplot2::aes(col=surprise, alpha=.5),
         upper = list(continuous = "density", combo = "box_no_facet")) +
-  ggplot2::scale_color_manual(values=c("green", "blue", "red")) +
+  ggplot2::scale_color_manual(values=c("gray", "orange","red")) +
+  ggplot2::scale_fill_manual(values=c("gray", "orange","red")) +
   ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
 
-
+#very right skewed dist
+#
 ######################################
 
 
@@ -407,9 +455,7 @@ kable(whisky.pca.summary$importance, caption = "Standardized PCA Summary", digit
 
 #logged, as in paper
 
-logged.c.whisky <- class_whisky
-logged.c.whisky[,-1] <- log(class_whisky[,-1])
-head(logged.c.whisky)
+
 
 
 head(logged.c.whisky)
@@ -485,7 +531,7 @@ kmeans_scotch.func <- function(data){
   return(list(km_results = results, wss = wss))
 }
 
-scotch.kmean <- erupt.func(logged.c.whisky[,-1])
+scotch.kmean <- kmeans_scotch.func(logged.c.whisky[,-1])
 
 wss.scotch <- data.frame(y = scotch.kmean$wss, x = c(1:10))
 
@@ -584,6 +630,67 @@ p3 <- plot_ly(pc_scores,
 
 print(p3)
 
+#voronoi
+###### NOT SURE IF RIGHT
+
+library(deldir)
+# k = 3 --------------------------------------------------
+pc_scores.v <- as.data.frame(PCA.whisky.log$x[,1:2])  # PC1 and PC2
+pc_scores.v$cluster3 <- scotch.kmean$km_results[[3]]$cluster
+pc_scores.v$Descriptor <- logged.c.whisky$Descriptor    # Add descriptor column
+#Extract the centroids
+centers3 <- scotch.kmean$km_results[[3]]$centers[, 1:2]  # Only PC1 and PC2
+centers3 <- as.data.frame(centers3)
+names(centers3) <- c("PC1", "PC2")
+
+#Define plot boundaries
+x_range <- range(pc_scores.v$PC1)
+y_range <- range(pc_scores.v$PC2)
+
+#Create Voronoi using centroids
+vor.w.3 <- deldir(
+  x = centers3$PC1,              # Only 3 points!
+  y = centers3$PC2,
+  rw = c(x_range[1], x_range[2],
+         y_range[1], y_range[2])
+)
+
+tiles.kmean3 <- tile.list(vor.w.3)
+
+#Plot
+cluster_colors.w3 <- c("firebrick", "orange", "skyblue")
+
+plot(tiles.kmean3,
+     fillcol = cluster_colors.w3,  # Color by cluster number (1, 2, 3)
+     border = "black", lwd = 2)
+
+# Add all 32 whiskies
+points(pc_scores.v$PC1, pc_scores.v$PC2,
+       col = "white",
+       pch = 21,      # Hollow circle (can be filled)
+       bg = cluster_colors.w3[pc_scores.v$cluster3],  # Fill color (white interior)
+       lwd = 2,
+       cex = 1.5)
+
+# Add the 3 centers as stars
+points(centers3$PC1, centers3$PC2,
+       pch = 10, cex = 2, lwd = 2, col = "black")
+
+title("K-means Voronoi Diagram (k=3)")
+# k = 4 --------------------------------------------------
+pc_scores.v$cluster4 <- scotch.kmean$km_results[[4]]$cluster
+
+vor.w.4 <- deldir(pc_scores.v$PC1, pc_scores.v$PC2)
+tiles.kmean4 <- tile.list(vor.w.4)
+
+cluster_colors.w4 <- c("indianred", "orchid", "skyblue", "lightgreen")
+fill_colors.w4 <- cluster_colors.w4[as.numeric(pc_scores.v$cluster4)]
+
+plot(tiles.kmean4, pch = 19, fillcol = fill_colors.w4, border = "white")
+
+
+
+
 
 
 ############################################################
@@ -660,7 +767,7 @@ print(p4)
 
 
 
-#triplot 4, PAM = 3
+#triplot 4, PAM = 4
 
 pc_scores$groups5 <- pam.scotch$pam_fit$`4`$clustering
 
@@ -677,6 +784,8 @@ p5 <- plot_ly(pc_scores,
                       zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
 
 print(p5)
+
+
 ######################################################
 
 #silhouette plots
@@ -684,14 +793,15 @@ print(p5)
 pam.w.sil3 <- silhouette(pam.scotch$pam_fit$`3`$clustering, dist(logged.c.whisky[,-1]))
 pam.sum.3 <- round(summary(pam.w.sil3 [,3]),3)
 
-#generally decent clustering
+#generally decent clustering and comparable to kmeans, same avg sil width
+#as no obvious outliers, kmeans likely sufficient
 plot(pam.w.sil3,main = "K = 3", border=NA)
 
 
 pam.w.sil4 <- silhouette(pam.scotch$pam_fit$`4`$clustering, dist(logged.c.whisky[,-1]))
 pam.sum.4 <- round(summary(pam.w.sil4 [,3]),3)
 
-#generally decent clustering
+#similar to kmeans result
 plot(pam.w.sil4,main = "K = 4", border=NA)
 
 
@@ -701,4 +811,276 @@ sil_sum.2 <-data.frame(stat = names(pam.sum.3), k3 = as.numeric(pam.sum.3), k4 =
 kable(sil_sum.2, caption = "Silhouette Width summary statistics for k = 3 and k =4", float = "H")%>%
   kable_styling(latex_options = "hold_position")
 
+#voronoi
+###### NOT SURE IF RIGHT
 
+library(deldir)
+### PAM with k = 3 ---------------------------------------------------------
+# Cluster assignments
+pc_scores.v$cluster_pam3 <- pam.scotch$pam_fit$`3`$clustering
+
+# Extract medoids (original space) and project into PCA space
+medoid3 <- pam.scotch$pam_fit$`3`$medoids
+
+medoid3.pca <- predict(PCA.whisky.log, medoid3)[,1:2]
+
+data_2d <- pca$x[, 1:2]
+
+medoid3.pca <- as.data.frame(medoid3.pca)
+names(medoid3.pca) <- c("PC1", "PC2")
+
+# STEP 4: Define boundaries for the Voronoi diagram
+# Without this, the edges go to infinity (your disconnected lines issue)
+x_range <- range(pc_scores.v$PC1)  # Min and max of PC1
+y_range <- range(pc_scores.v$PC2)  # Min and max of PC2
+
+# Voronoi tessellation around medoids
+vor.pam3 <- deldir(x = medoid3.pca$PC1,
+                   y = medoid3.pca$PC2,rw = c(x_range[1],
+                   x_range[2], # Rectangular window: xmin, xmax,
+                  y_range[1], y_range[2]) #                     ymin, ymax
+)
+
+# STEP 6: Convert to plottable tiles
+tiles.pam3 <- tile.list(vor.pam3)
+
+# STEP 7: Plot everything
+plot(tiles.pam3, border = "black", lwd = 2)  # Draw Voronoi boundaries
+
+# Add all 32 whiskies, colored by their cluster
+points(pc_scores.v$PC1, pc_scores.v$PC2,
+       col = cluster_colors.w3[pc_scores.v$cluster_pam3],
+       pch = 19)
+
+# Add the 3 medoids as stars
+points(medoid3.pca$PC1, medoid3.pca$PC2,
+       pch = 8, cex = 2, lwd = 2, col = "black")
+
+title("PAM Voronoi Diagram (k=3)")
+# k = 4 --------------------------------------------------
+pc_scores.v$cluster4 <- scotch.kmean$km_results[[4]]$cluster
+
+vor.w.4 <- deldir(pc_scores.v$PC1, pc_scores.v$PC2)
+tiles.kmean4 <- tile.list(vor.w.4)
+
+cluster_colors.w4 <- c("indianred", "orchid", "skyblue", "lightgreen")
+fill_colors.w4 <- cluster_colors.w4[as.numeric(pc_scores.v$cluster4)]
+
+plot(tiles.kmean4, pch = 19, fillcol = fill_colors.w4, border = "white")
+
+
+##############################################################
+#clustering dnedro
+
+# Add descriptor with PCA scores
+pc_scores.v$ID <- 1:32
+pc_scores.v <- as.data.frame(PCA.whisky.log$x[, 1:2])
+pc_scores.v$Descriptor <- logged.c.whisky$Descriptor
+pc_scores.v$Label <- paste(1:32, pc_scores.v$Descriptor, sep = "-")
+
+# find euclidian distance matrix
+dist_matrix <- dist(scale(logged.c.whisky[, -1]), method = "euclidean")
+
+# Perform hierarchical clustering
+hc_whisky <- hclust(dist_matrix, method = "complete")
+
+# plot
+plot(hc_whisky,
+     main = "Euclidian Hierarchical Clustering Dendrogram",
+     xlab = "Whisky Index",
+     ylab = "Height (Distance)",
+     hang = -1,                    # Align labels at bottom
+     labels = pc_scores.v$Label)  # Use descriptors as labels
+
+# show k=3 clusters
+rect.hclust(hc_whisky, k = 3, border = c("indianred", "orange", "skyblue"))
+
+#  add to dataframe
+clusters_hc3euc <- cutree(hc_whisky, k = 3)
+pc_scores.v$cluster_hc3euc <- clusters_hc3euc
+
+#  View cluster composition
+table(pc_scores.v$Descriptor, pc_scores.v$cluster_hc3euc)
+
+#euclidian good
+#seperates out islands completely in 3
+#almost all regional in 1 (malt)
+#counterfeits contained to group 2, along with some blends/grains
+
+
+#best overrall at detection region and outliers/counterfeits
+#along with manhattan
+
+
+###
+##################Chebyshev distance
+
+#chebyshev dist matrix, lets see if any large apparent dif despite
+#equal loadings
+
+dist_matrix2 <- dist(scale(logged.c.whisky[, -1]), method = "maximum")
+
+#Perform clustering
+hc_whisky2 <- hclust(dist_matrix2, method = "complete")
+
+#plot
+plot(hc_whisky2,
+     main = "Chebyshev Hierarchical Clustering Dendrogram",
+     xlab = "Whisky Index",
+     ylab = "Height (Distance)",
+     hang = -1,                    # Align labels at bottom
+     labels = pc_scores.v$Label)  # Use descriptors as labels
+
+#rectangles to show k=3 clusters
+rect.hclust(hc_whisky2, k = 3, border = c("indianred", "orange", "skyblue"))
+
+#Cut tree and add to dataframe
+clusters_hc3max <- cutree(hc_whisky2, k = 3)
+pc_scores.v$cluster_hc3max <- clusters_hc3max
+
+# cluster composition
+table(pc_scores.v$Descriptor, pc_scores.v$cluster_hc3max)
+
+#fairly poor performance in comparison euclidian
+#correctly completely isolates 3 counterfeits (group 3)
+#however are included closer to groups of provenance than blends
+#likely as both are different from group one, but vary in directionality
+#as only only considers the largest absolute difference between two whiskies across all PCs
+
+#Counterfeit and a single malt might appear closer to each other than
+#to the average Blend,
+#because their largest deviations along some PC dimension
+#are similar in magnitude, even if the direction is different.
+
+
+################################ correlation distance (1-r)
+
+
+
+# cor distance matrix
+dist_matrix3 <- as.dist(1 - cor(t(whisky_scaled)))
+
+#  clustering
+hc_whisky3 <- hclust(dist_matrix3, method = "complete")
+
+# plot
+plot(hc_whisky3,
+     main = "R Distance Hierarchical Clustering Dendrogram",
+     xlab = "Whisky Index",
+     ylab = "Height (Distance)",
+     hang = -1,                    # Align labels at bottom
+     labels = pc_scores.v$Label)  # Use descriptors as labels
+
+# STEP 5: Add colored rectangles to show k=3 clusters
+rect.hclust(hc_whisky3, k = 3, border = c("indianred", "orange", "skyblue"))
+
+# STEP 6: Cut tree and add to dataframe
+clusters_hc3cor <- cutree(hc_whisky3, k = 3)
+pc_scores.v$cluster_hc3cor <- clusters_hc3cor
+
+# STEP 7: View cluster composition
+table(pc_scores.v$Descriptor, pc_scores.v$cluster_hc3cor)
+
+#decent separation counterfeit in group 3
+#hard to distinguish any provenance in groups 1 and 2
+#but better relationship shown than chebyhov
+#generally better at showing provenance as well
+
+
+##############################
+
+# STEP 2: Calculate distance matrix
+dist_matrix4 <- dist(scale(logged.c.whisky[, -1]), method = "manhattan")
+
+# STEP 3: Perform hierarchical clustering
+hc_whisky4 <- hclust(dist_matrix4, method = "complete")
+
+# STEP 4: PLOT THE DENDROGRAM
+plot(hc_whisky4,
+     main = "Manhattan Hierarchical Clustering Dendrogram",
+     xlab = "Whisky Index",
+     ylab = "Height (Distance)",
+     hang = -1,                    # Align labels at bottom
+     labels = pc_scores.v$Label)  # Use descriptors as labels
+
+# STEP 5: Add colored rectangles to show k=3 clusters
+rect.hclust(hc_whisky4, k = 3, border = c("indianred", "orange", "skyblue"))
+
+# STEP 6: Cut tree and add to dataframe
+clusters_hc3manh <- cutree(hc_whisky4, k = 3)
+pc_scores.v$cluster_hc3manh <- clusters_hc3manh
+
+# STEP 7: View cluster composition
+table(pc_scores.v$Descriptor, pc_scores.v$cluster_hc3manh)
+
+#probably the best#####################
+
+#group one - < provenance, all 8 blends
+#group 2 - all counterfeits and one grain
+#group 3 - only specific distillaries, > provenance
+
+#makes sense as all pc loadings have approximately the same influence
+#and no outliars when scaled
+
+
+
+
+#################################
+
+#just looking
+
+
+# Load package
+
+library(dendextend)
+library(corrplot)
+
+d_whisky <- dist(scale(logged.c.whisky[, -1]))
+
+#vector all linkage methids
+hclust_methods <- c("ward.D", "single", "complete", "average", "mcquitty",
+                    "median", "centroid", "ward.D2")
+#empty dend vector
+whisky_dendlist <- dendlist()
+for(i in seq_along(hclust_methods)) {
+  hc.whisky <- hclust(d_whisky, method = hclust_methods[i])
+  whisky_dendlist <- dendlist(whisky_dendlist, as.dendrogram(hc.whisky))
+}
+names(whisky_dendlist) <- hclust_methods
+whisky_dendlist
+
+whisky_dendlist_cor <- cor.dendlist(whisky_dendlist)
+whisky_dendlist_cor
+
+corrplot::corrplot(whisky_dendlist_cor, "pie", "lower")
+
+
+#distances
+
+whisky_scaled <- scale(logged.c.whisky[, -1])
+
+
+distance_methods <- list(
+  "euclidean"   = dist(whisky_scaled, method = "euclidean"),
+  "manhattan"   = dist(whisky_scaled, method = "manhattan", p = 3),
+  "maximum"     = dist(whisky_scaled, method = "maximum"),
+  "minkowski"   = dist(whisky_scaled, method = "minkowski"),
+  "correlation" = as.dist(1 - cor(t(whisky_scaled)))  # correlation-based distance
+)
+
+
+distance_dendlist <- dendlist()
+
+for(dist_name in names(distance_methods)){
+  hc <- hclust(distance_methods[[dist_name]], method = "complete")
+  distance_dendlist <- dendlist(distance_dendlist, as.dendrogram(hc))
+}
+
+names(distance_dendlist) <- names(distance_methods)
+
+# Check dendlist correlations
+distance_dendlist_cor <- cor.dendlist(distance_dendlist)
+distance_dendlist_cor
+
+# Visualize
+corrplot(distance_dendlist_cor, method = "pie", type = "lower")

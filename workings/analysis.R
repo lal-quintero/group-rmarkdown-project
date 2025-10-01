@@ -28,7 +28,7 @@ library(cluster)
 
 #after EDA, it appears using logged data reduces multivariate outliers,
 #confirms normality of multivar dist, allows better distinction in
-#PCA loading directionality -> used for kmeans/medoids modelling
+#PCA loading directionality -> used for kmeans/medoids/hierarchical modelling
 
 # Create the whisky data as a dataframe
 whisky_data <- data.frame(
@@ -95,8 +95,10 @@ whiskyclass.melt <- melt(data= class_whisky,
 str(whiskyclass.melt)
 head(whiskyclass.melt)
 
+#######################################################################
 #boxplots
 #unlogged, no class
+
 
 ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
   geom_boxplot(aes(fill = Variable), notch = TRUE) +
@@ -105,7 +107,10 @@ ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
         legend.position = "none") +
   labs(x = "Chemical Elements", y = "Measured Values")
 
+
+
 #logged, no class
+
 
 ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
   geom_boxplot(aes(fill = Variable), notch = TRUE) +
@@ -117,7 +122,25 @@ ggplot(data = whiskyclass.melt, aes(x = Variable, y = Value)) +
 
 
 ##########################################################################
+#non-log scale boxplaots faceted by descriptor
 
+#USE NEXT TO UNCORRECTED MAHALABANOBIS IN PANEL
+#TO SHOW REASON FOR LOGGING
+
+ggplot(data = whiskyclass.melt, aes(x = Descriptor, y = Value)) +
+  geom_boxplot(aes(fill = Variable), notch = TRUE) +
+  facet_wrap(~ Variable, scales = "free") +
+  # scale_fill_brewer(palette = "Dark2") +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "none") +
+  labs(x = "Chemical Elements", y = "Measured Values")
+
+
+#USE NEXT TO CORRECTED MAHALABANOBIS IN PANEL
+#TO SHOW BENEFIT OF STRUCTURE EMERGINF FROM LOGGING
+
+#
 # Boxplot faceted by Descriptor
 #expand in another window
 #note P, Cl, Mn, Cu, Rb,K
@@ -139,7 +162,8 @@ ggplot(data = whiskyclass.melt, aes(x = Descriptor, y = Value)) +
 ######################################################
 
 #mean vector tests
-#cov tests
+#to display mean differences between
+#whiskies of provenance, blended and counterfeit
 
 logged.c.whisky
 
@@ -163,16 +187,30 @@ levels(class_whisky$Descriptor)
 (hotelling.test(subset(logged.c.whisky, Descriptor=="Island")[,-c(1)],
                 subset(logged.c.whisky, Descriptor =="Speyside")[,-c(1)]))
 
+#suggests that there are different mean vectors among at least 3 groups
 
 
 
 
-#do a variance test as well to rule out LDA
 
-
+#do a variance test along differing factors showing
+#dif correlation structure and median differences
+#to support that is multivar norm dist
 
 var.test(subset(logged.c.whisky, Descriptor=="Speyside")$Mn,
          subset(logged.c.whisky, Descriptor=="Counterfeit")$Mn,
+         alternative = "two.sided")
+
+var.test(subset(logged.c.whisky, Descriptor=="Speyside")$Fe,
+         subset(logged.c.whisky, Descriptor=="Counterfeit")$Fe,
+         alternative = "two.sided")
+
+var.test(subset(logged.c.whisky, Descriptor=="Speyside")$Mn,
+         subset(logged.c.whisky, Descriptor=="Blend")$Mn,
+         alternative = "two.sided")
+
+var.test(subset(logged.c.whisky, Descriptor=="Speyside")$Fe,
+         subset(logged.c.whisky, Descriptor=="Blend")$Fe,
          alternative = "two.sided")
 
 
@@ -180,16 +218,12 @@ var.test(subset(logged.c.whisky, Descriptor=="Speyside")$Mn,
 #corr test
 #high corr among k-rb, p -rb, Mn-K; K may display the most redundant info
 
-#unlogged
-ggcorrplot(cor(class_whisky[,-(1)]),
-           method = "square",
-           lab=TRUE,
-           ggtheme = theme_tufte,
-           colors = c("cyan", "white", "coral"),
-           hc.order = TRUE,
-           type = "lower")
+
 
 #logged
+#note generally positive correlations,
+#tied to upper right corner
+
 ggcorrplot(cor(log(class_whisky[,-(1)])),
            method = "square",
            lab=TRUE,
@@ -200,7 +234,11 @@ ggcorrplot(cor(log(class_whisky[,-(1)])),
 
 
 #speyside
-speyside_data <- subset(logged.c.whisky, class_whisky[,1] == "Speyside")
+#note lack of correlation where whole dataset displayed before,
+# and correlation density shift
+
+
+speyside_data <- subset(logged.c.whisky, logged.c.whisky[,1] == "Speyside")
 
 ggcorrplot(cor(speyside_data[,-1]),
            method = "square",
@@ -210,7 +248,11 @@ ggcorrplot(cor(speyside_data[,-1]),
            hc.order = TRUE,
            type = "lower")
 
-counterfeit_data <- subset(logged.c.whisky, class_whisky[,1] == "Counterfeit")
+#completely different correlation sturcture
+#drives Zn, Cu corner density corr seen in overrall data set
+#moderately high negative correlations induced by Fe, Cl and P
+
+counterfeit_data <- subset(logged.c.whisky, logged.c.whisky[,1] == "Counterfeit")
 
 ggcorrplot(cor(counterfeit_data[,-1]),
            method = "square",
@@ -220,6 +262,8 @@ ggcorrplot(cor(counterfeit_data[,-1]),
            hc.order = TRUE,
            type = "lower")
 
+
+#different structure again
 blend_data <- subset(logged.c.whisky, class_whisky[,1] == "Blend")
 
 ggcorrplot(cor(blend_data[,-1]),
@@ -230,12 +274,17 @@ ggcorrplot(cor(blend_data[,-1]),
            hc.order = TRUE,
            type = "lower")
 
+#all points to distinct groups, at least 3 emerging
+#as in paper
+
 
 
 ###################################################################
-#unlogged#, has extrem ebservations not meeting multivar normal dist
+#unlogged, has extreme ebservations not meeting multivar normal dist
 
 ####mahalbanobis
+#pair general results and plot with the unlogged boxes to show
+#suitability of logging data
 
 mu.hat.w <- colMeans(noclass_whisky)
 mu.hat.w
@@ -276,6 +325,7 @@ noclass_whisky2$surprise <- cut(noclass_whisky2$dMw,
                                 breaks= c(0, upper.quantiles.w, Inf),
                                 labels=c("Typical", "Somewhat", "Surprising", "Very"))
 
+#summary suprise obs
 surprise_summaryw <- table(noclass_whisky2$surprise)
 surprise_summaryw
 
@@ -286,6 +336,7 @@ surprise_df <- data.frame(
 )
 
 #surprise observation dataframe
+
 
 surprise_df
 
@@ -314,6 +365,12 @@ surprise_df.w <- data.frame(
   Count = as.numeric(surprise_summary.w),
   Percentage = round(100 * as.numeric(surprise_summary.w) / sum(surprise_summary.w), 1)
 )
+
+#SHOW THIS, shows doesnt meet multivar norm dist
+#show this to show that 25% of obs in somewhat suprising range
+#> 20% suprising or very, also where 40% of observations should be
+#there are 6%
+
 surprise_df.w
 
 head(noclass_whisky2)
@@ -328,14 +385,19 @@ ggpairs(noclass_whisky2[noclass_whisky2$surprise != "Somewhat", ], columns=1:11,
   ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
 
 #very right skewed dist
-#
+#lots of orange/red, not ideal
+#again shows not multi var normal
+
 ######################################
 
 
 
 #logged#
 
-####mahalbanobis
+####################################################mahalbanobis
+
+#much better, show general plots and distribution of observations,
+#now no outliers
 
 nc_whisky.log <- log(noclass_whisky)
 
@@ -404,6 +466,7 @@ nc_whisky.log2$surprise_detailed <- cut(l.dMw,
                                         labels = c("Bottom_50%", "50-75%", "75-90%",
 
                                                    "90-95%", "95-99%", "Top_1%"))
+
 print(table(nc_whisky.log2$surprise_detailed))
 
 
@@ -414,11 +477,13 @@ log.supr_df.2 <- data.frame(
   Count = as.numeric(det.logsuprise),
   Percentage = round(100 * as.numeric(det.logsuprise) / sum(det.logsuprise), 1)
 )
+
+#just about perfectly aligns now - great! show
 log.supr_df.2
 
 
 
-#########################################33
+#########################################
 #here we can see more normal dist
 
 filtered_data <- nc_whisky.log2 %>%
@@ -460,8 +525,11 @@ kable(whisky.pca.summary$importance, caption = "Standardized PCA Summary", digit
 
 head(logged.c.whisky)
 
-#slightly different, will investigate (PC1 0.4694 vs 0.476, PC2 0.2369 vs 0.212)
+#slightly different
 #provides more accounting of variation within the first principal components
+#close to what the paper produced variance wise
+
+#we will use logged data from here on out
 
 PCA.whisky.log <- prcomp(logged.c.whisky[,-(1)], center = TRUE, scale = TRUE)
 log.whisky.summary <- summary(PCA.whisky.log)
@@ -479,17 +547,58 @@ plot(PCA.whisky.log, type="l")
 #PC3 shows general class differentaition begining with pos/neg loadings
 PCA.whisky.log$rotation
 
-#biplot, logged, more clarity
+str(logged.c.whisky)
+
+logged.w.plot <- logged.c.whisky
+
+logged.w.plot$Provenance <- ifelse(logged.c.whisky$Descriptor %in% c("Blend", "Counterfeit", "Grain"),
+                                     as.character(logged.c.whisky$Descriptor),
+                                     "Provenance")
+logged.w.plot$Provenance <- ifelse(logged.w.plot$Provenance %in% c("Grain", "Blend"),
+                                   "Grain_Blend",
+                                   as.character(logged.w.plot$Provenance))
+
+logged.w.plot$Provenance<- as.factor(logged.w.plot$Provenance)
+logged.w.plot$sample <- as.factor(whisky_data$Sample_no)
+
+
+# Use both color and shape to denote classes
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
-         groups = (class_whisky$Descriptor), ellipse = TRUE)
+         groups = logged.c.whisky$Descriptor,
+         ellipse = TRUE,
+         var.axes = TRUE) +
+  geom_point(aes(shape = logged.c.whisky$Descriptor), size = 3) +
+  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4))
+
+#adjusted
+# Use both color and shape to denote classes
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = logged.w.plot$Provenance,
+         ellipse = TRUE,
+         var.axes = TRUE) +
+  geom_point(aes(shape = logged.w.plot$Descriptor,
+                 color =logged.w.plot$Provenance), size = 4) +
+  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4))  +
+  geom_text(aes(label = logged.w.plot$sample),
+            size = 3, vjust = -1, hjust = 0.5)
+
+#note variable loading directionality
+#S, Ca, Br primarily acting positively on PC2
+# Zn between
+#P - rest primarily on PC1
+#fairly equally distributed loading contributions
+#Though as PC1 contributes more variance (twice as much)
+#P - Cu should contribute more, many of which we saw
+#median differentials of within boxplots
 
 #triplot
 
 # Extract PC scores
 pc_scores <- data.frame(PCA.whisky.log$x[,1:3])
 pc_scores$groups <- class_whisky$Descriptor  # or your grouping variable
+pc_scores$groups2 <- logged.w.plot$Provenance  # or your grouping variable
 
-# Create interactive 3D plot
+
 p1 <- plot_ly(pc_scores,
               x = ~PC1, y = ~PC2, z = ~PC3,
               color = ~groups,
@@ -503,10 +612,40 @@ p1 <- plot_ly(pc_scores,
 
 print(p1)
 
+#linear separation of fakes is well seen here
+#also clear seperation of 2 island whiskies, which is reflected in
+#the papers dierarchical clustering
+
+
+#using 3 groups
+
+#likely proposed groups shown more clearly here
+#can see that will need at least two planes to seperate
+#blends from everyone else, and even then a few mistakes
+
+#will likely be refelcted in clustering
+
+
+p1.1 <- plot_ly(pc_scores,
+              x = ~PC1, y = ~PC2, z = ~PC3,
+              color = ~groups2,
+              symbol = ~groups2,  # Add this line for shapes
+              type = 'scatter3d',
+              mode = 'markers',
+              marker = list(size = 5),
+              symbols = c('circle', 'square', 'cross')) %>%  # Specify symbols
+  layout(title = "3D PCA Plot - First 3 Components",
+         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
+                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
+                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
+
+print(p1.1)
+
 #unlogged biplot
 ggbiplot(PCA.whisky.scaled, obs.scale = 1, var.scale = 1,
          groups = (class_whisky$Descriptor), ellipse = TRUE)
 
+#even more evidence for using log, gives more distinction to all groups
 
 
 #############################################################
@@ -552,6 +691,10 @@ ggplot(wss.scotch, aes(x = x, y = y)) +
   theme(axis.text = element_text(angle =45, size = 10),
         axis.text.x = element_text(face = "italic"))
 
+#we can see visually that over 1/3 of variation reduction is held in
+#going from 2 to 3 groups
+
+
 #intraclass var scores
 wss.scotch
 
@@ -561,35 +704,76 @@ wss.scotch
 
 
 #silhouettes
+#k=3
 kmean.w.sil3 <- silhouette(scotch.kmean$km_results$`3`$cluster, dist(logged.c.whisky[,-1]))
 kmean.sum.3 <- round(summary(kmean.w.sil3 [,3]),3)
 
 #generally decent clustering, except 2 = 0.19
+#which will likely be our blend/proveneance overlap
 plot(kmean.w.sil3,main = "K = 3", border=NA)
 
-
+#k=4
 kmean.w.sil4 <- silhouette(scotch.kmean$km_results$`4`$cluster, dist(logged.c.whisky[,-1]))
 kmean.sum.4 <- round(summary(kmean.w.sil4 [,3]),3)
 
-#weaker clustering among 1 and 2
+#weaker clustering among 4th group
 plot(kmean.w.sil4,main = "K = 4", border=NA)
 
 
 sil_sum.1 <-data.frame(stat = names(kmean.sum.3), k3 = as.numeric(kmean.sum.3), k4 = as.numeric(kmean.sum.4))
 
+#summary stats of silhouette scores
 
 kable(sil_sum.1, caption = "Silhouette Width summary statistics for k = 3 and k =4", float = "H")%>%
   kable_styling(latex_options = "hold_position")
 
 ###########biplots all 3-4 using kmeans
 
+#ignore
+# k=4
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
-         groups = (scotch.kmean$km_results$`4`$cluster), ellipse = TRUE)
+         groups = as.factor(scotch.kmean$km_results$`4`$cluster), ellipse = TRUE)
 
 
+################### 4, again, can see here the discrimatory
+#begins to collapse in the between blend and provenance
+
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = as.factor(scotch.kmean$km_results$`4`$cluster), ellipse = TRUE) +
+  geom_point(aes(shape = logged.w.plot$Descriptor,
+                 color = as.factor(scotch.kmean$km_results$`4`$cluster)), size = 4)  +
+  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4), name = "Descriptor") +
+  geom_text(aes(label = logged.w.plot$sample),
+            size = 3, vjust = -1, hjust = 0.5)
+
+
+#################
+
+
+
+#3
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
          groups = (scotch.kmean$km_results$`3`$cluster), ellipse = TRUE)
 
+
+install.packages("ggnewscale")
+library(ggnewscale)
+
+
+
+
+#################################
+#### similar to PAM, pam seems better though
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = as.factor(scotch.kmean$km_results$`3`$cluster), ellipse = TRUE) +
+  geom_point(aes(shape = logged.w.plot$Descriptor,
+                 color = as.factor(scotch.kmean$km_results$`3`$cluster)), size = 4)  +
+  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4), name = "Descriptor") +
+  geom_text(aes(label = logged.w.plot$sample),
+            size = 3, vjust = -1, hjust = 0.5)
+
+#most similar to manhattan distance cutting, exactly the same OAcc
+#when using provenance, blend/grain and counterfeit groups
 
 
 #triplot of 3
@@ -603,7 +787,7 @@ p2 <- plot_ly(pc_scores,
               type = 'scatter3d',
               mode = 'markers',
               marker = list(size = 5)) %>%
-  layout(title = "3D PCA Plot - First 3 Components",
+  layout(title = "PCA Triplot using K = 3",
          scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
                       yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
                       zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
@@ -612,7 +796,7 @@ print(p2)
 
 
 
-#triplot 3, kmeans = 4
+#triplot 3, kmeans = 4, dont use, just for visual
 
 pc_scores$groups3 <- scotch.kmean$km_results$`4`$cluster  # or your grouping variable
 
@@ -631,7 +815,7 @@ p3 <- plot_ly(pc_scores,
 print(p3)
 
 #voronoi
-###### NOT SURE IF RIGHT
+###### NOT SURE IF RIGHT, allejondro agreed wouldnt add much either
 
 library(deldir)
 # k = 3 --------------------------------------------------
@@ -674,7 +858,7 @@ points(pc_scores.v$PC1, pc_scores.v$PC2,
 
 # Add the 3 centers as stars
 points(centers3$PC1, centers3$PC2,
-       pch = 10, cex = 2, lwd = 2, col = "black")
+       pch = 10, cex = 2, lwd = 2, col = "white")
 
 title("K-means Voronoi Diagram (k=3)")
 # k = 4 --------------------------------------------------
@@ -695,6 +879,7 @@ plot(tiles.kmean4, pch = 19, fillcol = fill_colors.w4, border = "white")
 
 ############################################################
 #pam cluster analysis
+
 
 
 
@@ -736,15 +921,34 @@ summary(pam1)
 
 #biplots
 
+#####################################
+
+#### best maybe?
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
-         groups = (pam.scotch$pam_fit$`2`$clustering), ellipse = TRUE)
+         groups = as.factor(pam.scotch$pam_fit$`3`$clustering), ellipse = TRUE) +
+geom_point(aes(shape = logged.w.plot$Provenance,
+               color = as.factor(pam.scotch$pam_fit$`3`$clustering)), size = 4)  +
+  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4), name = "Descriptor") +
+  geom_text(aes(label = logged.w.plot$sample),
+            size = 3, vjust = -1, hjust = 0.5)
+
+#################################################3
+
+
+#slightly better? disciminates against all 5 counterfeits cohesively
+
+#4
+#both kmeans and pam point to 3 groups for optimum clustering
+
 
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
-         groups = (pam.scotch$pam_fit$`3`$clustering), ellipse = TRUE)
+         groups = as.factor(pam.scotch$pam_fit$`4`$clustering), ellipse = TRUE) +
+  geom_point(aes(shape = logged.w.plot$Descriptor,
+                 color = as.factor(pam.scotch$pam_fit$`4`$clustering)), size = 4)  +
+  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4), name = "Descriptor") +
+  geom_text(aes(label = logged.w.plot$sample),
+            size = 3, vjust = -1, hjust = 0.5)
 
-#both kmeans and pam point to 3-4 groups for optimum clustering
-ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
-         groups = (pam.scotch$pam_fit$`4`$clustering), ellipse = TRUE)
 
 #triplot 4, PAM = 3
 
@@ -794,7 +998,7 @@ pam.w.sil3 <- silhouette(pam.scotch$pam_fit$`3`$clustering, dist(logged.c.whisky
 pam.sum.3 <- round(summary(pam.w.sil3 [,3]),3)
 
 #generally decent clustering and comparable to kmeans, same avg sil width
-#as no obvious outliers, kmeans likely sufficient
+#but better segregation counterfeights which is important,
 plot(pam.w.sil3,main = "K = 3", border=NA)
 
 
@@ -807,12 +1011,12 @@ plot(pam.w.sil4,main = "K = 4", border=NA)
 
 sil_sum.2 <-data.frame(stat = names(pam.sum.3), k3 = as.numeric(pam.sum.3), k4 = as.numeric(pam.sum.4))
 
-
+#summary
 kable(sil_sum.2, caption = "Silhouette Width summary statistics for k = 3 and k =4", float = "H")%>%
   kable_styling(latex_options = "hold_position")
 
 #voronoi
-###### NOT SURE IF RIGHT
+###### NOT SURE IF RIGHT, ignore
 
 library(deldir)
 ### PAM with k = 3 ---------------------------------------------------------
@@ -870,10 +1074,10 @@ plot(tiles.kmean4, pch = 19, fillcol = fill_colors.w4, border = "white")
 
 
 ##############################################################
-#clustering dnedro
+#clustering dendros
 
 # Add descriptor with PCA scores
-pc_scores.v$ID <- 1:32
+pc_scores.v$ID <- whisky_data$Sample_no
 pc_scores.v <- as.data.frame(PCA.whisky.log$x[, 1:2])
 pc_scores.v$Descriptor <- logged.c.whisky$Descriptor
 pc_scores.v$Label <- paste(1:32, pc_scores.v$Descriptor, sep = "-")
@@ -883,6 +1087,7 @@ dist_matrix <- dist(scale(logged.c.whisky[, -1]), method = "euclidean")
 
 # Perform hierarchical clustering
 hc_whisky <- hclust(dist_matrix, method = "complete")
+
 
 # plot
 plot(hc_whisky,
@@ -944,8 +1149,10 @@ table(pc_scores.v$Descriptor, pc_scores.v$cluster_hc3max)
 #fairly poor performance in comparison euclidian
 #correctly completely isolates 3 counterfeits (group 3)
 #however are included closer to groups of provenance than blends
-#likely as both are different from group one, but vary in directionality
+#likely as both are highly different from group one, but vary in directionality
 #as only only considers the largest absolute difference between two whiskies across all PCs
+
+
 
 #Counterfeit and a single malt might appear closer to each other than
 #to the average Blend,
@@ -995,6 +1202,8 @@ dist_matrix4 <- dist(scale(logged.c.whisky[, -1]), method = "manhattan")
 # STEP 3: Perform hierarchical clustering
 hc_whisky4 <- hclust(dist_matrix4, method = "complete")
 
+
+
 # STEP 4: PLOT THE DENDROGRAM
 plot(hc_whisky4,
      main = "Manhattan Hierarchical Clustering Dendrogram",
@@ -1027,7 +1236,248 @@ table(pc_scores.v$Descriptor, pc_scores.v$cluster_hc3manh)
 
 #################################
 
-#just looking
+#matrix function
+confusion_metric <- function(c_matrix) {
+
+
+  ################## produce class measures of quality ##########################
+
+  ###### class TP,FP,TN, FN counts
+
+  # generate an empty list for TP, FP, TN, FN counts
+  rawposneg <- list()
+
+
+  #1: true positives per class
+  rawposneg$TP <- diag(c_matrix)
+
+
+  #2: true negatives per class
+
+
+  rawposneg$TN <- sum(c_matrix) - rowSums(c_matrix) - colSums(c_matrix) + rawposneg$TP
+
+  #3: False positives per class
+
+  #vector generated as before
+  rawposneg$FP <-  rowSums(c_matrix) - diag(c_matrix)
+
+
+  #4: False negative per class
+
+  rawposneg$FN <- colSums(c_matrix) - diag(c_matrix)
+
+  # convert list to table for easier viewing
+
+  #determine number of classes for table output and further quality metrics
+  n <- ncol(c_matrix)
+
+  count_table <- as.data.frame(rawposneg)
+  rownames(count_table) <- paste0("Class_", 1:n)
+
+  ###### class quality metrics
+
+
+  #extract TP,TN,FP and FN from list structure
+  TP <- rawposneg$TP
+  FP <- rawposneg$FP
+  FN <- rawposneg$FN
+  TN <- rawposneg$TN
+
+
+  classquality_meas <- list()
+
+  #1: Accuracy - ACC_i
+  classquality_meas$ACC_i <- (TP + TN)/ (TP + TN + FP + FN)
+
+  #2: Misclassification rate - MR_i
+  classquality_meas$MR_i <- (FP + FN)/ (TP + TN + FP + FN)
+
+  #3: Precision - PPV_i
+  classquality_meas$PPV_i <- TP/ (TP + FP)
+
+  #4: Recall - TPR_i
+  classquality_meas$TPR_i <- TP/ (TP + FN)
+
+  #5: Specificity - TNR_i
+  classquality_meas$TNR_i <- TN/ (TN + FP)
+
+  #6: F1-score_i
+  PPV_i <- classquality_meas$PPV_i
+  TPR_i <- classquality_meas$TPR_i
+  classquality_meas$F_class <- (2*PPV_i*TPR_i)/(PPV_i + TPR_i)
+
+
+  classqual_table <- as.data.frame(classquality_meas)
+  rownames(classqual_table) <- paste0("Class_", 1:n)
+
+  ######################## global quality measures ##########################
+
+  #generate an empty list for global quality metrics
+  globalquality_meas <- list()
+
+  #1: OAcc or overall accuracy
+  globalquality_meas$OAcc <- sum(diag(c_matrix))/sum(c_matrix)
+
+  ###### averaged metrics
+
+  #2: Average accuracy or AAcc
+  globalquality_meas$AAcc <- sum(classquality_meas$ACC_i)/n
+
+  #3: F1-score_m
+  globalquality_meas$F1_m <- sum(classquality_meas$F_class)/n
+
+  #4:Macro Precision or TNR_m
+  globalquality_meas$TNR_m <- sum(classquality_meas$TNR_i)/n
+
+  ###### weighted metrics
+
+  #1: Micro F-1 score - F1_mu
+
+  globalquality_meas$F1_mu <- (sum(TP * classquality_meas$F_class))/(sum(TP))
+
+  #2: Micro Precision - PPV_mu
+
+  globalquality_meas$PPV_mu <- (sum(TP * PPV_i))/(sum(TP))
+
+  #3:Micro Recall - TPR_mu
+
+  globalquality_meas$TPR_mu <- (sum(TP * TPR_i))/(sum(TP))
+
+  globalqual_table <- as.data.frame(globalquality_meas)
+
+
+  #Return TRUE if each condition held to allow to see where matrix fails
+  #Return both class and global quality metrics
+  return(list(count_table =  count_table,
+              classqual_table = classqual_table,
+              globalqual_table = globalqual_table))
+}
+
+
+
+
+
+# confusion matrix KMEANS, PAM, HIERARCHIAL, with k = 3
+
+scotch.kmean$km_results$`3`$cluster
+
+
+logged.w.plot$kmean <- scotch.kmean$km_results$`3`$cluster
+
+logged.w.plot
+
+
+
+logged.w.plot$kmean <- factor(logged.w.plot$kmean,
+                              levels = c(1, 2, 3),
+                              labels = c("1:Counterfeit", "2:Grain_Blend", "3:Provenance"))
+
+kmean_c_matrix <- table(Predicted = logged.w.plot$kmean,
+                          Actual = logged.w.plot$Provenance)
+kmean_c_matrix
+
+confusion_metric(kmean_c_matrix)
+
+
+#####pam
+
+pam.scotch$pam_fit$`3`$clustering
+
+logged.w.plot$pam <- pam.scotch$pam_fit$`3`$clustering
+
+logged.w.plot
+
+
+
+logged.w.plot$pam <- factor(logged.w.plot$pam,
+                              levels = c(2, 1, 3),
+                              labels = c("1:Counterfeit", "2:Grain_Blend", "3:Provenance"))
+
+pam_c_matrix <- table(Predicted = logged.w.plot$pam,
+                        Actual = logged.w.plot$Provenance)
+pam_c_matrix
+
+confusion_metric(pam_c_matrix)
+
+#agglomoterative clustering
+
+#manhattan
+
+clusters_hc3manh
+
+
+logged.w.plot$manh <- clusters_hc3manh
+
+logged.w.plot
+
+
+
+logged.w.plot$manh <- factor(logged.w.plot$manh,
+                            levels = c(2, 1, 3),
+                            labels = c("1:Counterfeit", "2:Grain_Blend", "3:Provenance"))
+
+manh_c_matrix <- table(Predicted = logged.w.plot$manh,
+                      Actual = logged.w.plot$Provenance)
+manh_c_matrix
+
+confusion_metric(manh_c_matrix)
+
+#euclidian
+
+
+clusters_hc3euc
+
+
+logged.w.plot$euc <- clusters_hc3euc
+
+
+logged.w.plot
+
+
+
+logged.w.plot$euc <- factor(logged.w.plot$euc,
+                             levels = c(2, 1, 3),
+                             labels = c("1:Counterfeit", "2:Grain_Blend", "3:Provenance"))
+
+euc_c_matrix <- table(Predicted = logged.w.plot$euc,
+                       Actual = logged.w.plot$Provenance)
+euc_c_matrix
+
+confusion_metric(euc_c_matrix)
+
+
+#euclidian actually very poor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###############################################
+
+#just looking/ignore
 
 
 # Load package
@@ -1084,3 +1534,5 @@ distance_dendlist_cor
 
 # Visualize
 corrplot(distance_dendlist_cor, method = "pie", type = "lower")
+
+

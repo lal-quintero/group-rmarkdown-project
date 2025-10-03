@@ -1,0 +1,658 @@
+---
+title: "Uisge Beatha: Water of Life or Watered Down? Multivariate Methods for Whisky Class Differentiation"
+author: ""
+date: ""
+format:
+  revealjs:
+    embed-resources: true
+    transition: fade
+    theme: serif
+    footer: "Slàinte Mhath"
+---
+
+
+```{r setup}
+
+library(patchwork)
+library(ggplot2)
+library(ggpubr)
+library(GGally)
+library(ggbiplot)
+library(ggcorrplot)
+library(extrafont)
+library(matlib)
+library(bookdown)
+library(RColorBrewer)
+library(ggpubr)
+library(ggthemes)
+library(extrafont)
+library(knitr)
+library(kableExtra)
+library(gridExtra)
+library(grid)
+library(dplyr)
+library(reshape2)
+library(Hotelling)
+library(mvtnorm)
+library(ggExtra)
+library(reshape2)
+library(plotly)
+library(cluster)
+library(gt)
+library(DT)
+library(MVN)
+library(plotly)
+library(htmlwidgets)
+
+
+# Create the whisky data as a dataframe
+whisky_data <- data.frame(
+  Sample_no = c("1", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a", "12a", "13a", "14a", "15a", "16", "17", "18a", "19", "20a", "21", "22a", "23a", "24", "25", "26", "27", "28", "29", "30", "31", "32"),
+
+  Descriptor = c("Blend", "Blend", "Blend", "Blend", "Blend", "Blend", "Blend", "Blend", "Counterfeit", "Counterfeit", "Counterfeit", "Counterfeit", "Counterfeit", "Grain", "Grain", "Highland", "Highland", "Island", "Island", "Island", "Island", "Lowland", "Lowland", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside"),
+
+  Distillery = c("Baile Nicol Jarvie", "Bells", "Chivas", "Dewars", "Johnnie Walker", "The Famous Grouse", "Whyte and Mackay", "William Grant", "Unknown 1", "Unknown 2", "Unknown 3", "Unknown 4", "Unknown 5", "Grain matured", "Grain unmatured", "Glengoyne", "Glenmorangie", "Bowmore", "Bruichladdie", "Bunnahabhain", "Talisker", "Auchentoshan", "Glenkinchie", "Balvenie", "Craigellachie", "Dufftown", "Glen Elgin", "Glenburgie", "Glennfiddich", "Glenrothes", "Knockando", "Linkwood"),
+
+  P = c(0.152, 0.653, 0.375, 0.121, 0.326, 0.145, 0.067, 0.239, 0.089, 0.088, 0.279, 0.320, 0.120, 0.034, 0.084, 1.04, 0.126, 0.914, 1.63, 2.24, 0.034, 0.169, 0.108, 0.695, 0.096, 0.883, 0.115, 2.00, 0.317, 0.953, 0.051, 0.276),
+
+  S = c(1.10, 1.58, 0.809, 1.16, 1.09, 0.615, 0.576, 0.748, 4.06, 14.7, 15.9, 22.1, 26.1, 2.23, 5.53, 5.57, 0.796, 6.67, 5.48, 7.54, 4.85, 1.46, 2.45, 3.85, 0.819, 4.64, 1.35, 7.91, 2.72, 4.11, 1.03, 1.05),
+
+  Cl = c(0.173, 0.238, 0.193, 0.157, 0.180, 0.097, 0.151, 0.147, 0.066, 0.072, 0.083, 0.596, 0.071, 0.252, 0.113, 0.343, 0.245, 0.316, 0.697, 1.35, 0.362, 0.417, 0.176, 0.120, 0.177, 0.130, 0.404, 0.185, 0.344, 0.399, 0.191, 0.207),
+
+  K = c(7.86, 4.93, 4.31, 3.20, 5.48, 2.74, 2.36, 2.84, 0.336, 1.23, 0.811, 2.32, 2.37, 6.44, 3.25, 24.2, 6.95, 21.1, 36.5, 36.2, 5.67, 11.7, 7.76, 20.3, 6.11, 14.0, 9.27, 37.7, 12.4, 16.7, 5.14, 6.22),
+
+  Ca = c(1.45, 1.40, 1.22, 1.14, 0.526, 0.416, 0.745, 0.976, 1.24, 1.40, 1.36, 1.78, 1.63, 1.04, 1.35, 0.857, 0.859, 0.868, 4.13, 2.12, 0.607, 0.681, 0.738, 0.765, 0.633, 1.05, 1.40, 1.65, 0.660, 1.83, 0.605, 1.01),
+
+  Mn = c(0.032, 0.019, 0.019, 0.011, 0.018, 0.009, 0.012, 0.010, 0.007, 0.006, 0.006, 0.008, 0.010, 0.013, 0.012, 0.023, 0.035, 0.037, 0.038, 0.051, 0.018, 0.042, 0.031, 0.031, 0.024, 0.030, 0.031, 0.053, 0.029, 0.041, 0.017, 0.020),
+
+  Fe = c(0.027, 0.110, 0.044, 0.050, 0.103, 0.050, 0.047, 0.021, 0.154, 0.025, 0.057, 0.019, 0.082, 0.115, 0.076, 0.197, 0.025, 0.148, 0.288, 0.184, 0.070, 0.128, 0.106, 0.121, 0.094, 0.078, 0.046, 0.134, 0.132, 0.137, 0.094, 0.064),
+
+  Cu = c(0.186, 0.242, 0.196, 0.189, 0.286, 0.208, 0.159, 0.137, 0.085, 0.052, 0.038, 0.038, 0.187, 0.174, 0.164, 1.251, 0.523, 0.548, 0.587, 0.580, 0.277, 1.32, 0.434, 0.380, 0.239, 0.533, 0.195, 0.198, 0.519, 1.030, 0.432, 0.769),
+
+  Zn = c(0.015, 0.021, 0.007, 0.018, 0.020, 0.007, 0.019, 0.020, 0.038, 0.018, 0.016, 0.015, 0.194, 0.019, 0.046, 0.041, 0.011, 0.032, 0.066, 0.057, 0.033, 0.037, 0.022, 0.035, 0.025, 0.024, 0.029, 0.043, 0.193, 0.029, 0.020, 0.019),
+
+  Br = c(0.002, 0.005, 0.003, 0.003, 0.002, 0.002, 0.003, 0.003, 0.005, 0.004, 0.002, 0.068, 0.012, 0.004, 0.010, 0.004, 0.003, 0.007, 0.034, 0.014, 0.003, 0.006, 0.002, 0.005, 0.005, 0.002, 0.006, 0.008, 0.004, 0.007, 0.008, 0.004),
+
+  Rb = c(0.006, 0.003, 0.002, 0.003, 0.002, 0.001, 0.002, 0.002, 0.001, 0.001, 0.002, 0.001, 0.005, 0.006, 0.003, 0.016, 0.006, 0.018, 0.039, 0.037, 0.006, 0.012, 0.007, 0.024, 0.006, 0.014, 0.009, 0.026, 0.013, 0.014, 0.005, 0.006)
+)
+
+
+#set as factor
+whisky_data$Sample_no <- as.factor(whisky_data$Sample_no)
+whisky_data$Descriptor <- as.factor(whisky_data$Descriptor)
+whisky_data$Distillery <- as.factor(whisky_data$Distillery)
+
+
+
+#subset data for handling
+noclass_whisky <- subset(whisky_data, select = -c(Sample_no, Descriptor, Distillery))
+
+class_whisky <- subset(whisky_data, select = -c(Sample_no, Distillery))
+
+
+
+#logged as in paper
+logged.c.whisky <- class_whisky
+logged.c.whisky[,-1] <- log(class_whisky[,-1])
+
+
+#melt for boxplots
+whiskyclass.melt <- melt(data= class_whisky,
+                         measure.vars = 2:12,
+                         variable.name = "Variable",
+                         value.name = "Value",
+                         id.vars = 1)
+
+```
+
+
+## Introduction {background-image="barrels.jpeg" background-opacity="0.3"}
+In this slide we'll discuss why were doing what were doing; we want to confirm this novel method of XTRF analysis in detecting counterfeits and whisky provenance using multivariate analysis
+
+
+# Methods
+
+##
+
+```{r}
+
+
+
+whisky_data %>%
+  gt() %>%
+  tab_header(
+    title = "Whisky Origin and Chemical Data"
+  ) %>%
+  fmt_number(
+    columns = where(is.numeric),
+    decimals = 3
+  ) %>%
+  tab_options(
+    table.font.size = px(12),   # shrink font
+    data_row.padding = px(1)    # tighter row spacing
+  )
+
+
+
+```
+
+
+## Initial viewing:
+
+```{r}
+
+#| fig-height: 12
+#| fig-width: 20
+
+
+p1.1 <- ggplot(data = whiskyclass.melt, aes(x = Descriptor, y = Value)) +
+  geom_boxplot(aes(fill = Variable), notch = TRUE) +
+  facet_wrap(~ Variable, scales = "free") +
+  # scale_fill_brewer(palette = "Dark2") +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "none") +
+  labs(x = "Chemical Elements", y = "Measured Values")
+
+
+mu.hat.w <- colMeans(noclass_whisky)
+
+
+sigma.hat.w <- cov(noclass_whisky)
+
+
+dMw <- mahalanobis(noclass_whisky, center=mu.hat.w, cov=sigma.hat.w)
+
+
+upper.quantiles.w <- qchisq(c(.9, .95, .99), df=11)
+density.at.quantiles.w <- dchisq(x=upper.quantiles.w, df=11)
+cut.points.w <- data.frame(upper.quantiles.w, density.at.quantiles.w)
+
+
+p2.1 <- ggplot(data.frame(dMw), aes(x=dMw)) +
+  geom_histogram(aes(y=after_stat(density)), bins=nclass.FD(dMw),
+                 fill="white", col="black") +
+  geom_rug() +
+  stat_function(fun=dchisq, args = list(df=11),
+                col="firebrick", size=1.5, alpha=.7, xlim=c(0,25)) +
+  geom_segment(data=cut.points.w,
+               aes(x=upper.quantiles.w, xend=upper.quantiles.w,
+                   y=rep(0,3), yend=density.at.quantiles.w),
+               col="navyblue", size=2) +
+  xlab("Mahalanobis distances and cut points") +
+  ylab("Histogram and density")
+
+grid.arrange(p1.1,p2.1, ncol = 2)
+```
+
+## Assesment Mahalanobis Distribution
+
+::::{.columns}
+
+::: {.column width="60%"}
+
+```{r}
+p <- ncol(noclass_whisky)
+n1 <- nrow(noclass_whisky)
+
+theoretical <- qchisq(ppoints(n1), df = p)
+
+qqplot(
+  theoretical, sort(dMw),
+  main = "Q-Q Plot of Mahalanobis Distances",
+  xlab = expression(paste("Theoretical ", chi^2, " Quantiles")),
+  ylab = "Observed Mahalanobis Distances",
+  pch = 19, col = "dodgerblue"
+)
+abline(0, 1, col = "firebrick", lwd = 2)
+```
+:::
+
+::: {.column width = "40%"}
+```{r}
+
+#| fig-width: 100%
+
+noclass_whisky2 <- noclass_whisky
+
+noclass_whisky2$dMw <- dMw
+
+noclass_whisky2$surprise <- cut(noclass_whisky2$dMw,
+                                breaks= c(0, upper.quantiles.w, Inf),
+                                labels=c("Typical", "Somewhat", "Surprising", "Very"))
+
+library(MVN)
+mvn.test <- mvn(noclass_whisky)
+
+
+
+#more detailed surprise observation
+noclass_whisky2$surprise_detailed <- cut(dMw,
+                                         breaks = c(0,
+                                                    qchisq(0.5, df=ncol(noclass_whisky)),   # 50%
+                                                    qchisq(0.75, df=ncol(noclass_whisky)),  # 75%
+                                                    qchisq(0.9, df=ncol(noclass_whisky)),   # 90%
+                                                    qchisq(0.95, df=ncol(noclass_whisky)),  # 95%
+                                                    qchisq(0.99, df=ncol(noclass_whisky)),  # 99%
+                                                    Inf),
+                                         labels = c("Bottom_50%", "50-75%", "75-90%",
+
+                                                    "90-95%", "95-99%", "Top_1%"))
+
+
+
+
+
+#more detailed look at suprising observations
+
+
+surprise_summary.w <- table(noclass_whisky2$surprise_detailed)
+
+surprise_df.w <- data.frame(
+  Category = names(surprise_summary.w),
+  Count = as.numeric(surprise_summary.w),
+  Percentage = round(100 * as.numeric(surprise_summary.w) / sum(surprise_summary.w), 1)
+)
+
+test_stat <- 1.325
+p_val <- "<0.001"
+
+surprise_df2 <- rbind(
+  surprise_df.w,
+  data.frame(
+    Category = "Henze-Zirkler Test",
+    Count = test_stat,
+    Percentage = p_val
+  )
+)
+
+
+surprise_df2 %>%
+  gt() %>%
+  tab_header(
+    title = "Summary of Surprise Categories"
+  ) %>%
+  cols_label(
+    Category = "Distance Category",
+    Count = "Count/HZ",
+    Percentage = "%/P-val"
+  ) %>%
+  tab_style(
+    style = cell_borders(sides = "top", weight = px(2)),
+    locations = cells_body(rows = Category == "Henze-Zirkler Test")
+  )
+```
+:::
+
+::::
+
+##
+
+```{r}
+ggpairs(noclass_whisky2[noclass_whisky2$surprise != "Somewhat", ], columns=1:11,
+        ggplot2::aes(col=surprise, alpha=.5),
+        upper = list(continuous = "density", combo = "box_no_facet")) +
+  ggplot2::scale_color_manual(values=c("gray", "orange","red")) +
+  ggplot2::scale_fill_manual(values=c("gray", "orange","red")) +
+  ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
+```
+
+## Post log-transformation
+
+```{r}
+log.box <- ggplot(data = whiskyclass.melt, aes(x = Descriptor, y = Value)) +
+  geom_boxplot(aes(fill = Variable), notch = TRUE) +
+  scale_y_log10() +
+  facet_wrap(~ Variable, scales = "free") +
+  # scale_fill_brewer(palette = "Dark2") +
+  theme_pubclean() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "none") +
+  labs(x = "Chemical Elements", y = "Measured Values")
+
+nc_whisky.log <- log(noclass_whisky)
+
+mu.hat.l <- colMeans(nc_whisky.log)
+
+
+sigma.hat.l <- cov(nc_whisky.log)
+
+
+l.dMw <- mahalanobis(nc_whisky.log, center=mu.hat.l, cov=sigma.hat.l)
+
+
+upper.quantiles.w <- qchisq(c(.9, .95, .99), df=11)
+density.at.quantiles.w <- dchisq(x=upper.quantiles.w, df=11)
+cut.points.w <- data.frame(upper.quantiles.w, density.at.quantiles.w)
+
+
+mah.plot2 <- ggplot(data.frame(l.dMw), aes(x=l.dMw)) +
+  geom_histogram(aes(y=after_stat(density)), bins=nclass.FD(l.dMw),
+                 fill="white", col="black") +
+  geom_rug() +
+  stat_function(fun=dchisq, args = list(df=11),
+                col="firebrick", size=1.5, alpha=.7, xlim=c(0,25)) +
+  geom_segment(data=cut.points.w,
+               aes(x=upper.quantiles.w, xend=upper.quantiles.w,
+                   y=rep(0,3), yend=density.at.quantiles.w),
+               col="navy", size=2) +
+  xlab("Mahalanobis distances and cut points") +
+  ylab("Histogram and density")
+
+grid.arrange(log.box, mah.plot2, ncol = 2)
+```
+
+## Assesment Log-transformed Mahalanobis Distribution
+
+::::{.columns}
+
+::: {.column width="60%"}
+
+```{r}
+
+plot.new()
+qqplot(
+  theoretical, sort(l.dMw),
+  main = "Q-Q Plot of Mahalanobis Distances",
+  xlab = expression(paste("Theoretical ", chi^2, " Quantiles")),
+  ylab = "Observed Mahalanobis Distances",
+  pch = 19, col = "dodgerblue"
+)
+abline(0, 1, col = "firebrick", lwd = 2)
+```
+:::
+
+::: {.column width = "40%"}
+```{r}
+
+#| fig-width: 100%
+
+nc_whisky.log2 <- nc_whisky.log
+
+nc_whisky.log2$dMw <- l.dMw
+
+noclass_whisky2$surprise <- cut(noclass_whisky2$dMw,
+                                breaks= c(0, upper.quantiles.w, Inf),
+                                labels=c("Typical", "Somewhat", "Surprising", "Very"))
+
+
+mvn.test2 <- mvn(nc_whisky.log)
+
+
+
+#more detailed surprise observation
+nc_whisky.log2$surprise_detailed <- cut(l.dMw,
+                                        breaks = c(0,
+                                                   qchisq(0.5, df=ncol(noclass_whisky)),   # 50%
+                                                   qchisq(0.75, df=ncol(noclass_whisky)),  # 75%
+                                                   qchisq(0.9, df=ncol(noclass_whisky)),   # 90%
+                                                   qchisq(0.95, df=ncol(noclass_whisky)),  # 95%
+                                                   qchisq(0.99, df=ncol(noclass_whisky)),  # 99%
+                                                   Inf),
+                                        labels = c("Bottom_50%", "50-75%", "75-90%",
+
+                                                   "90-95%", "95-99%", "Top_1%"))
+
+det.logsuprise <- table(nc_whisky.log2$surprise_detailed)
+
+log.supr_df.2 <- data.frame(
+  Category = names(det.logsuprise),
+  Count = as.numeric(det.logsuprise),
+  Percentage = round(100 * as.numeric(det.logsuprise) / sum(det.logsuprise), 1)
+)
+
+
+
+
+test_stat2 <-  0.984
+p_val2 <- "0.137"
+
+surprise_dflog <- rbind(
+  log.supr_df.2,
+  data.frame(
+    Category = "Henze-Zirkler Test",
+    Count = test_stat2,
+    Percentage = p_val2
+  )
+)
+
+
+surprise_dflog %>%
+  gt() %>%
+  tab_header(
+    title = "Summary of Surprise Categories"
+  ) %>%
+  cols_label(
+    Category = "Distance Category",
+    Count = "Count/HZ",
+    Percentage = "%/P-val"
+  ) %>%
+  tab_style(
+    style = cell_borders(sides = "top", weight = px(2)),
+    locations = cells_body(rows = Category == "Henze-Zirkler Test")
+  )
+```
+
+:::
+
+::::
+
+##
+
+
+
+```{r}
+
+nc_whisky.log2$surprise <- cut(nc_whisky.log2$dMw,
+                               breaks= c(0, upper.quantiles.w, Inf),
+                               labels=c("Typical", "Somewhat", "Surprising", "Very"))
+
+
+filtered_data <- nc_whisky.log2 %>%
+  filter(!surprise %in% c("Surprising", "Very"))
+
+ggpairs(filtered_data, columns=1:11,
+        ggplot2::aes(col=surprise, alpha=.5),
+        upper = list(continuous = wrap("density", mapping = aes(fill=surprise), alpha=0.3)),
+        lower = list(continuous = wrap("points", alpha=0.7))) +
+  ggplot2::scale_color_manual(values=c("gray", "orange")) +
+  ggplot2::scale_fill_manual(values=c("gray", "orange")) +
+  ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
+```
+
+## Structure examination
+
+::::{.columns}
+
+::: {.column width="60%"}
+
+```{r}
+ggcorrplot(cor(log(class_whisky[,-(1)])),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte,
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
+```
+
+:::
+
+
+
+::: {.column width="40%"}
+
+```{r}
+
+#speyside vs blend, dif mean vectors
+
+speyblend <- (hotelling.test(subset(logged.c.whisky, Descriptor=="Speyside")[,-c(1)],
+                subset(logged.c.whisky, Descriptor =="Blend")[,-c(1)]))
+                
+#counterfeit vs speyside, evidence dif mean vectors
+countspey <- (hotelling.test(subset(logged.c.whisky, Descriptor=="Counterfeit")[,-c(1)],
+                subset(logged.c.whisky, Descriptor =="Speyside")[,-c(1)]))
+
+#counterfeit vs blend, dif mean vectors
+countblend <- (hotelling.test(subset(logged.c.whisky, Descriptor=="Counterfeit")[,-c(1)],
+                subset(logged.c.whisky, Descriptor =="Blend")[,-c(1)]))
+
+#island vs speyside (ie no dif in provenence)
+islspey <- (hotelling.test(subset(logged.c.whisky, Descriptor=="Island")[,-c(1)],
+                subset(logged.c.whisky, Descriptor =="Speyside")[,-c(1)]))
+
+      
+test_results <- data.frame(
+  Comparison = c("Counterfeit vs Speyside",
+                 "Blend vs Speyside",
+                 "Counterfeit vs Blend", 
+                 "Island vs Speyside"),
+  T2_Statistic = c(7083.1, 213.48, 928150, 171.63),
+  P_Value = c(0.009267, 0.02582, 0.008905, 0.581)
+)
+
+test_results %>%
+  gt() %>%
+  tab_header(
+    title = "Hotelling's T² Test Results"
+  ) %>%
+  cols_label(
+    Comparison = "Comparison",
+    T2_Statistic = "T² Statistic",
+    P_Value = "P-value"
+  ) %>%
+  fmt_number(
+    columns = T2_Statistic,
+    decimals = 2
+  ) %>%
+  fmt_number(
+    columns = P_Value,
+    decimals = 3
+  )
+
+```
+
+:::
+
+::::
+
+## Whiskies of:
+```{r}
+logged.w.plot <- logged.c.whisky
+
+logged.w.plot$Provenance <- ifelse(logged.c.whisky$Descriptor %in% c("Blend", "Counterfeit", "Grain"),
+                                   as.character(logged.c.whisky$Descriptor),
+                                   "Provenance")
+logged.w.plot$Provenance <- ifelse(logged.w.plot$Provenance %in% c("Grain", "Blend"),
+                                   "Grain_Blend",
+                                   as.character(logged.w.plot$Provenance))
+
+logged.w.plot$Provenance<- as.factor(logged.w.plot$Provenance)
+
+
+
+provenance_data <- subset(logged.w.plot, logged.w.plot[,13] == "Provenance")
+
+p.cor <- ggcorrplot(cor(provenance_data[, -c(1, 13)]),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte,
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
+
+
+
+counterfeit_data <- subset(logged.w.plot, logged.w.plot[,13] == "Counterfeit")
+
+c.cor <- ggcorrplot(cor(counterfeit_data[, -c(1, 13)]),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte,
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
+
+
+
+blend_data <- subset(logged.w.plot, logged.w.plot[,13] == "Grain_Blend")
+
+b.cor <- ggcorrplot(cor(blend_data[, -c(1, 13)]),
+           method = "square",
+           lab=TRUE,
+           ggtheme = theme_tufte,
+           colors = c("cyan", "white", "coral"),
+           hc.order = TRUE,
+           type = "lower")
+```
+
+:::: {.columns}
+
+::: {.column width="33%"}
+### Provenance
+```{r}
+#| fig-width: 7
+#| fig-height: 7
+#| out-width: "100%"
+p.cor
+```
+
+:::
+
+::: {.column width="33%"}
+### Counterfeits
+```{r}
+#| fig-width: 7
+#| fig-height: 7
+#| out-width: "100%"
+c.cor
+```
+
+:::
+
+::: {.column width="33%"}
+### Blends & Grains
+```{r}
+#| fig-width: 7
+#| fig-height: 7
+#| out-width: "100%"
+b.cor
+```
+:::
+
+
+::::
+
+## Differentiation within the PCA Space
+```{r}
+PCA.whisky.log <- prcomp(logged.c.whisky[,-(1)], center = TRUE, scale = TRUE)
+
+logged.w.plot$sample <- as.factor(whisky_data$Sample_no)
+
+pc_scores <- data.frame(PCA.whisky.log$x[,1:3])
+
+pc_scores$groups <- logged.w.plot$Descriptor  
+
+pc_scores$groups2 <- logged.w.plot$Provenance  
+
+p1 <- plot_ly(pc_scores,
+              x = ~PC1, y = ~PC2, z = ~PC3,
+              color = ~groups2,
+              symbol = ~groups,
+              symbols = c('circle', 'square', 'diamond', 'cross', 'x', 'triangle-up', 'triangle-down'),
+              type = 'scatter3d',
+              mode = 'markers',
+              marker = list(size = 5)) %>%
+  layout(title = "3D PCA Space with Proposed Groups",
+         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
+                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
+                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
+
+p1
+
+```
+
+
+## Results 
+
+## Discussion

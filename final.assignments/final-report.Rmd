@@ -1,15 +1,16 @@
 ---
 title: "Group_scotch_Project"
-author: "Levi Quintero, "
+author: "Levi Quintero"
 date: "2025-09-15"
-output: bookdown::pdf_document2
-
-
+output: 
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+bibliography: ["ref.bib"]
+biblio-style: "apalike"
+link-citations: true
 header-includes:
     - \usepackage{bbm}
     - \usepackage{float}
-    
-
 ---
 
 ```{r setup, include=FALSE}
@@ -39,5 +40,137 @@ library(reshape2)
 library(Hotelling)
   library(mvtnorm)
   library(ggExtra)
+  
+  # Create the whisky data as a dataframe
+whisky_data <- data.frame(
+  Sample_no = c("1", "2a", "3a", "4a", "5a", "6a", "7a", "8a", "9a", "10a", "11a", "12a", "13a", "14a", "15a", "16", "17", "18a", "19", "20a", "21", "22a", "23a", "24", "25", "26", "27", "28", "29", "30", "31", "32"),
+
+  Descriptor = c("Blend", "Blend", "Blend", "Blend", "Blend", "Blend", "Blend", "Blend", "Counterfeit", "Counterfeit", "Counterfeit", "Counterfeit", "Counterfeit", "Grain", "Grain", "Highland", "Highland", "Island", "Island", "Island", "Island", "Lowland", "Lowland", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside", "Speyside"),
+
+  Distillery = c("Baile Nicol Jarvie", "Bells", "Chivas", "Dewars", "Johnnie Walker", "The Famous Grouse", "Whyte and Mackay", "William Grant", "Unknown 1", "Unknown 2", "Unknown 3", "Unknown 4", "Unknown 5", "Grain matured", "Grain unmatured", "Glengoyne", "Glenmorangie", "Bowmore", "Bruichladdie", "Bunnahabhain", "Talisker", "Auchentoshan", "Glenkinchie", "Balvenie", "Craigellachie", "Dufftown", "Glen Elgin", "Glenburgie", "Glennfiddich", "Glenrothes", "Knockando", "Linkwood"),
+
+  P = c(0.152, 0.653, 0.375, 0.121, 0.326, 0.145, 0.067, 0.239, 0.089, 0.088, 0.279, 0.320, 0.120, 0.034, 0.084, 1.04, 0.126, 0.914, 1.63, 2.24, 0.034, 0.169, 0.108, 0.695, 0.096, 0.883, 0.115, 2.00, 0.317, 0.953, 0.051, 0.276),
+
+  S = c(1.10, 1.58, 0.809, 1.16, 1.09, 0.615, 0.576, 0.748, 4.06, 14.7, 15.9, 22.1, 26.1, 2.23, 5.53, 5.57, 0.796, 6.67, 5.48, 7.54, 4.85, 1.46, 2.45, 3.85, 0.819, 4.64, 1.35, 7.91, 2.72, 4.11, 1.03, 1.05),
+
+  Cl = c(0.173, 0.238, 0.193, 0.157, 0.180, 0.097, 0.151, 0.147, 0.066, 0.072, 0.083, 0.596, 0.071, 0.252, 0.113, 0.343, 0.245, 0.316, 0.697, 1.35, 0.362, 0.417, 0.176, 0.120, 0.177, 0.130, 0.404, 0.185, 0.344, 0.399, 0.191, 0.207),
+
+  K = c(7.86, 4.93, 4.31, 3.20, 5.48, 2.74, 2.36, 2.84, 0.336, 1.23, 0.811, 2.32, 2.37, 6.44, 3.25, 24.2, 6.95, 21.1, 36.5, 36.2, 5.67, 11.7, 7.76, 20.3, 6.11, 14.0, 9.27, 37.7, 12.4, 16.7, 5.14, 6.22),
+
+  Ca = c(1.45, 1.40, 1.22, 1.14, 0.526, 0.416, 0.745, 0.976, 1.24, 1.40, 1.36, 1.78, 1.63, 1.04, 1.35, 0.857, 0.859, 0.868, 4.13, 2.12, 0.607, 0.681, 0.738, 0.765, 0.633, 1.05, 1.40, 1.65, 0.660, 1.83, 0.605, 1.01),
+
+  Mn = c(0.032, 0.019, 0.019, 0.011, 0.018, 0.009, 0.012, 0.010, 0.007, 0.006, 0.006, 0.008, 0.010, 0.013, 0.012, 0.023, 0.035, 0.037, 0.038, 0.051, 0.018, 0.042, 0.031, 0.031, 0.024, 0.030, 0.031, 0.053, 0.029, 0.041, 0.017, 0.020),
+
+  Fe = c(0.027, 0.110, 0.044, 0.050, 0.103, 0.050, 0.047, 0.021, 0.154, 0.025, 0.057, 0.019, 0.082, 0.115, 0.076, 0.197, 0.025, 0.148, 0.288, 0.184, 0.070, 0.128, 0.106, 0.121, 0.094, 0.078, 0.046, 0.134, 0.132, 0.137, 0.094, 0.064),
+
+  Cu = c(0.186, 0.242, 0.196, 0.189, 0.286, 0.208, 0.159, 0.137, 0.085, 0.052, 0.038, 0.038, 0.187, 0.174, 0.164, 1.251, 0.523, 0.548, 0.587, 0.580, 0.277, 1.32, 0.434, 0.380, 0.239, 0.533, 0.195, 0.198, 0.519, 1.030, 0.432, 0.769),
+
+  Zn = c(0.015, 0.021, 0.007, 0.018, 0.020, 0.007, 0.019, 0.020, 0.038, 0.018, 0.016, 0.015, 0.194, 0.019, 0.046, 0.041, 0.011, 0.032, 0.066, 0.057, 0.033, 0.037, 0.022, 0.035, 0.025, 0.024, 0.029, 0.043, 0.193, 0.029, 0.020, 0.019),
+
+  Br = c(0.002, 0.005, 0.003, 0.003, 0.002, 0.002, 0.003, 0.003, 0.005, 0.004, 0.002, 0.068, 0.012, 0.004, 0.010, 0.004, 0.003, 0.007, 0.034, 0.014, 0.003, 0.006, 0.002, 0.005, 0.005, 0.002, 0.006, 0.008, 0.004, 0.007, 0.008, 0.004),
+
+  Rb = c(0.006, 0.003, 0.002, 0.003, 0.002, 0.001, 0.002, 0.002, 0.001, 0.001, 0.002, 0.001, 0.005, 0.006, 0.003, 0.016, 0.006, 0.018, 0.039, 0.037, 0.006, 0.012, 0.007, 0.024, 0.006, 0.014, 0.009, 0.026, 0.013, 0.014, 0.005, 0.006)
+)
+
+
+#set as factor
+whisky_data$Sample_no <- as.factor(whisky_data$Sample_no)
+whisky_data$Descriptor <- as.factor(whisky_data$Descriptor)
+whisky_data$Distillery <- as.factor(whisky_data$Distillery)
+
+
+
+#subset data for handling
+noclass_whisky <- subset(whisky_data, select = -c(Sample_no, Descriptor, Distillery))
+
+class_whisky <- subset(whisky_data, select = -c(Sample_no, Distillery))
+
+
+
+#logged as in paper
+logged.c.whisky <- class_whisky
+logged.c.whisky[,-1] <- log(class_whisky[,-1])
+
+
+#scaled as in paper
+scale.log.w <- logged.c.whisky
+scale.log.w[,-1] <- scale(logged.c.whisky[,-1])
+
+
+#melt for boxplots
+whiskyclass.melt <- melt(data= class_whisky,
+                         measure.vars = 2:12,
+                         variable.name = "Variable",
+                         value.name = "Value",
+                         id.vars = 1)
 
 ```
+
+
+# Introduction
+
+
+
+# Methods
+
+## Exploratory Data Analysis (EDA)
+
+All data analysis were conducted in R version 4.4.3 [@R-base]. We initially assessed if the data derived from @shand2017multivariate (Table 1) followed a multivariate normal distribution ($X \sim N_{11}(\mu, \Sigma)$) via visual comparisons of observation Mahalanobis distances ($d^2_M(X, \mu)$) to their expected quantiles and a QQ plot line (Fig. x), observation density plots by factor (Fig. x), as well as by conducting a Henze-Zirkler Test of Multivariate normality ($HZ = 1.325, p < 0.001$; Table 1). As the data clearly did not conform to $X \sim N_{11}(\mu, \Sigma)$, we log transformed the observations and re-aplied the same analysis (Fig X2; Table 2) with results now conforming to $X \sim N_{11}(\mu, \Sigma)$ with no outliers ($d_M > 0.99$). This log-transformed data was henceforth used in this analysis.
+
+```{r chemdata, echo=FALSE}
+
+whisky_data %>%
+  knitr::kable(
+    caption = "Whisky Origin and Chemical Data",
+    digits = 3,
+    booktabs = TRUE
+  ) %>%
+  kableExtra::kable_styling(
+    latex_options = c("scale_down", "HOLD_position"),
+    font_size = 9
+  ) %>%
+  kableExtra::footnote(
+    general = "Chemical concentrations reported in mg per L. All samples analyzed using total reflection X-ray fluorescence. Derived from Shand et al. 2017.",
+    general_title = "Note:",
+    footnote_as_chunk = TRUE
+  )
+```
+
+
+Due to @shand2017multivariate's inabilty to draw cohesive classification results at the regional level, we sought to allow the data as well as whisky type composition knowledge to intuitively guide our selection of the number of assigned clusters ($k^*$) in this analysis. We first viewed box-plots by variable class and the overall correlation structure of the chemical variables. Drawing upon observations here (Fig. X3), we then isolated the chemical variable correlation structures of the largest classes available to view and assessed mean vector differences between these. We then viewed the observations within three-dimensional principal component (PC) space to reduce dimensionality for intuitive viewing of possible clusters (Fig x4).
+
+Counterfeits, Blends and Speyside whisky classes all displayed mean significant  vector differences while Island and Speyside (Both single-region origin malted-barley whiskies) did not. Counterfeits were visually clearly differentiated with the PC space, as well as tentative groups emerging between blended/grain whiskies and regional whiskies (Speyside, Highland, Lowland, and Island). Further, blended whiskies are composed primarily of grains (wheat or maize, 60-80%) with little malted-barley, while single origin whiskies are of a single-malt or multi-malt character [@storrie1962scotch; @bower2016scotch; @kew2016chemical; @SWACWG2021]. 
+
+Thus we re-aggregated the sampled whiskies into three logical overarching predictive whisky classes: "Counterfeits", "Grains & Blends" (a combination of gran and blended classes), and "Provenance" (all whiskies of a single-region origin). This reclassification is further supported as both grain type (barley vs. other) and regionality being shown to influence chemical composition of whiskies under other analytical methods [@kew2016chemical; @roullier2020influence].
+
+We then reassessed correlation plots of chemical observations for each of these three classes, as well as mean vector differences between them. We found striking correlation structure differences between the classes (particularly between counterfeit and provenance whiskies) as well as significant mean vector differences (Fig x6, Table 3).
+
+This led us to conduct Principle Component Analysis (PCA) to ascertain the magnitude and directionality of each chemical driver within a reduced space, as to infer and categorize chemical differences between groups later drawn from cluster analysis. Principal components analysis was conducted via using the prcomp() function on our scaled, log-transformed data.
+
+As we wished to utilize all of the available data within our $n \ x \ p$ dimensional space, we implemented k-means, partitioning around medoids (PAM), and agglomerative hierarchical clustering to draw data-supported groups to test our predictive ones. In doing so, we scaled our log-transformed observations, except in the case of correlation distance hierarchical clustering which was conducted on the log-transformed data. Further, we wished to see if we could draw general consensus between these methods in support of using XTRF chemical composition sampling as a widely applicable method to produce suitable data for general multivariate analysis to categorize whiskies by counterfeit, blend, or single origin status. 
+
+## K-means Unsupervised Clustering
+
+K-means analysis was conducted on the scaled-log transformed data using the kmeans() function with the default recommended Hartigan-Wong algorithm, iterations set to 100 (iter. max  = 100), and 50 random starts (nstart = 50) for all values of k. Setting random initializations to 50 reduces the chance of poor initial centroid allocation, while allowing 100 maximum iterations ensures convergence during the process of iterative group allocation of data points (ref). 
+
+This process was generated for $k = 1-10$, allowing $k^*$ to be chosen via visual assessment of total within sum of squares (WSS) reductions with concurrent silhouette plot analysis. 
+
+## Partitioning Around Medoids (PAM) Unsupervised  Clustering
+
+PAM clustering was conducted using the pam() function from the cluster package with Euclidean distance [@kaufman_pam]. $k^*$ assessment was conducted via assessing silhouette plots and widths as well as via comparing clustering results to k-means clustering for respective $k^*$. 
+
+## Agglomerative Hierarchical Clustering
+
+All agglomerative hierarchical clustering was performed using hclust(), with the original clustering results of (ref) reproduced via using euclidian distance with complete linkage (method = "complete"). We attempted to find consistent clustering results to (ref) using other distances (Minkowski, Manhattan and Chebyshev) and associated linkages (complete and Ward) as well as develop our own agglomerative hierarchical clustering models with better performance. Of those trialed, Euclidian (Ward linkage), Manhattan (complete and Ward linkage), and Correlation ($1-r$, Ward linkage) distances were retained for comparison and analysis.
+
+## Quality Metrics 
+
+After $k^*$ was established confusion matrices were produced for all clustering results and compared to our proposed groups (Provenance, blend/grain, and counterfeit whiskies) with global quality statistics ($Acc$, $F1\text{-score}_M$, $TNR_M$, $F1\text{-score}_{\mu}$, $PPV_{\mu}$, $TPR_{\mu}$) calculated. The best scoring clustering results were then taken and class-wise quality statistics calculated ($Acc_i$, $MR_i$, $PPV_i$, $TPR_i$, $TNR_i$, $F1\text{-score}_i$).
+
+
+
+# Results
+
+# Discussion
+
+# Reference

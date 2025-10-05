@@ -6,12 +6,17 @@ format:
   revealjs:
     embed-resources: true
     transition: fade
+    slideNumber: "c/t"
+    progress: true
+    self-contained: true
     theme: serif
     footer: "Slàinte Mhath"
 ---
 
 
 ```{r setup}
+
+set.seed(300568257, kind="Mersenne-Twister")
 
 library(patchwork)
 library(ggplot2)
@@ -94,6 +99,11 @@ class_whisky <- subset(whisky_data, select = -c(Sample_no, Distillery))
 #logged as in paper
 logged.c.whisky <- class_whisky
 logged.c.whisky[,-1] <- log(class_whisky[,-1])
+
+
+#scaled as in paper
+scale.log.w <- logged.c.whisky
+scale.log.w[,-1] <- scale(logged.c.whisky[,-1])
 
 
 #melt for boxplots
@@ -516,7 +526,7 @@ test_results <- data.frame(
 test_results %>%
   gt() %>%
   tab_header(
-    title = "Whisk Class Hotelling's T² Test Results"
+    title = "Whisky Class Hotelling's T² Test Results"
   ) %>%
   cols_label(
     Comparison = "Comparison",
@@ -592,7 +602,7 @@ test_results2 %>%
 ```{r}
 
 
-
+#scale invariant
 
 provenance_data <- subset(logged.w.plot, logged.w.plot[,13] == "Provenance")
 
@@ -668,7 +678,8 @@ b.cor
 
 ## Differentiation within the PCA Space
 ```{r}
-PCA.whisky.log <- prcomp(logged.c.whisky[,-(1)], center = TRUE, scale = TRUE)
+PCA.whisky.log <- prcomp(scale.log.w[,-(1)], center = FALSE, scale = FALSE)
+
 
 logged.w.plot$sample <- as.factor(whisky_data$Sample_no)
 
@@ -717,7 +728,7 @@ ggplot(pca_var, aes(x = PC_num, y = Variance)) +
   geom_line(size = 1.5) +
   geom_point(size = 3) +
   geom_vline(xintercept = 3, linetype = "dashed", color = "red", linewidth = 1) +
-  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.0816, ymax = 1.178, alpha = 0.2, fill = "coral") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.08163043, ymax = 1.178, alpha = 0.2, fill = "coral") +
   labs(x = "Principal Component",
        y = "Variance Explained") +
   scale_x_continuous(breaks = 1:nrow(pca_var)) +
@@ -804,11 +815,14 @@ ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
 
 ::: {.column width="70%"}
 ```{r}
+
+#| label: kmean-clustering
+#| cache: true
+
 kmeans_scotch.func <- function(data){
   results <- list()
   for (i in 1:10){
     results[[as.character(i)]] <- kmeans(data,
-                                         algorithm="MacQueen",
                                          centers=i, iter.max = 100, nstart = 50)
 
   }
@@ -818,9 +832,12 @@ kmeans_scotch.func <- function(data){
   return(list(km_results = results, wss = wss))
 }
 
-scotch.kmean <- kmeans_scotch.func(logged.c.whisky[,-1])
+scotch.kmean <- kmeans_scotch.func(scale.log.w[,-1])
+
 
 wss.scotch <- data.frame(y = scotch.kmean$wss, x = c(1:10))
+
+
 
 ggplot(wss.scotch, aes(x = x, y = y)) +
   geom_point(color = "black", size = 3) +
@@ -828,10 +845,10 @@ ggplot(wss.scotch, aes(x = x, y = y)) +
   theme_tufte() +
   geom_vline(xintercept = 3, linetype = "dashed", color = "red", linewidth = 1) +
   annotate("rect", xmin = -Inf, xmax = Inf, ymin = 109.43011, ymax = 161.11470, alpha = 0.3, fill = "indianred") +
-  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 109.43011, ymax = 45.42382, alpha = 0.2, fill = "coral") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 39.52173, ymax = 109.43011, alpha = 0.2, fill = "coral") +
   theme_tufte() +
   scale_x_continuous(limits = c(1, 10), breaks = 1:10) +  # set ticks 1 to 10
-  scale_y_continuous(limits = c(0, 300)) +
+  scale_y_continuous(limits = c(0, 350)) +
   labs(
     y = "Total Within Sum of Squares (WSS)",
     x = "Number of Clusters (K)"
@@ -846,15 +863,17 @@ ggplot(wss.scotch, aes(x = x, y = y)) +
 
 ::: {.column width="30%"}
 ```{r}
+scotch.kmean$km_results$`3`
+scotch.kmean$km_results$`4`
 
 kmeans_summary_t <- data.frame(
   Metric = c("Cluster Sizes", "Variance Explained", "Avg Silhouette", 
              "Total Within SS", "Between SS", "Total SS"),
-  K3 = c("10, 6, 16", "58.6%", "0.36", 
+  K3 = c("10, 6, 16", "51.6%", "0.30", 
          round(scotch.kmean$km_results$`3`$tot.withinss, 2),
          round(scotch.kmean$km_results$`3`$betweenss, 2),
          round(scotch.kmean$km_results$`3`$totss, 2)),
-  K4 = c("10, 6, 9, 7", "64.5%", "0.25",
+  K4 = c("8, 2, 6, 16", "58.9%", "0.28",
          round(scotch.kmean$km_results$`4`$tot.withinss, 2),
          round(scotch.kmean$km_results$`4`$betweenss, 2),
          round(scotch.kmean$km_results$`4`$totss, 2))
@@ -885,7 +904,7 @@ kmeans_summary_t %>%
 
 ::: {.column width="50%"}
 ```{r}
-kmean.w.sil3 <- silhouette(scotch.kmean$km_results$`3`$cluster, dist(logged.c.whisky[,-1]))
+kmean.w.sil3 <- silhouette(scotch.kmean$km_results$`3`$cluster, dist(scale.log.w[,-1]))
 
 #generally decent clustering, except 2 = 0.19
 #which will likely be our blend/proveneance overlap
@@ -899,7 +918,8 @@ plot(kmean.w.sil3,main = "K = 3", border=NA)
 ::: {.column width="50%"}
 ```{r}
 
-kmean.w.sil4 <- silhouette(scotch.kmean$km_results$`4`$cluster, dist(logged.c.whisky[,-1]))
+kmean.w.sil4 <- silhouette(scotch.kmean$km_results$`4`$cluster, dist(scale.log.w[,-1]))
+                                                                
 
 
 
@@ -910,7 +930,9 @@ plot(kmean.w.sil4,main = "K = 4", border=NA)
 
 ::::
 
-# Groupings in PC Space, k = 3
+## Groupings in PC Space
+
+### k = 3
 
 
 ```{r}
@@ -927,7 +949,10 @@ ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
 
 ```
 
-## k = 4
+##
+
+### k = 4
+
 ```{r}
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
          groups = as.factor(scotch.kmean$km_results$`4`$cluster), ellipse = TRUE) +
@@ -940,16 +965,22 @@ ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
 ```
 
 
-## PAM Assesment, with K = 3
+## PAM Assesment
+
+### K = 3
 
 ```{r}
+
+#| label: PAM-clustering
+#| cache: true
+
 kmedoid_scotch.func <- function(data, k_max = 10) {
   pam_fit <- list()
   wss <- numeric(k_max)        # preallocate
   sil_width <- numeric(k_max)  # preallocate
 
   for (i in 2:k_max) { # PAM doesn't work with k=1
-    pam_fit[[as.character(i)]] <- pam(data, k = i)
+    pam_fit[[as.character(i)]] <- pam(data, k = i, metric = "euclidean")
 
     # within-cluster dissimilarity (objective function)
     wss[i] <- pam_fit[[as.character(i)]]$objective[2]
@@ -961,7 +992,7 @@ kmedoid_scotch.func <- function(data, k_max = 10) {
   return(list(pam_fit = pam_fit, wss = wss, silhouette = sil_width))
 }
 
-pam.scotch <- kmedoid_scotch.func(logged.c.whisky[,-1])
+pam.scotch <- kmedoid_scotch.func(scale.log.w[,-1])
 
 ```
 
@@ -1035,16 +1066,33 @@ reinforcing k=3 as good
 
 ::::
 
-## 
+##
+
 ```{r}
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
          groups = as.factor(pam.scotch$pam_fit$`3`$clustering), ellipse = TRUE) +
 geom_point(aes(shape = logged.w.plot$Provenance,
                color = as.factor(pam.scotch$pam_fit$`3`$clustering)), size = 4)  +
-  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4), name = "Descriptor") +
+  scale_shape_manual(values = c(15, 16, 17, 7), name = "Descriptor") +
   geom_text(aes(label = logged.w.plot$sample),
             size = 3, vjust = -1, hjust = 0.5) +
   theme_tufte()
+
+```
+
+## 
+
+```{r}
+
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = as.factor(pam.scotch$pam_fit$`4`$clustering), ellipse = TRUE) +
+geom_point(aes(shape = logged.w.plot$Provenance,
+               color = as.factor(pam.scotch$pam_fit$`4`$clustering)), size = 4)  +
+  scale_shape_manual(values = c(15, 16, 17), name = "Descriptor") +
+  geom_text(aes(label = logged.w.plot$sample),
+            size = 3, vjust = -1, hjust = 0.5) +
+  theme_tufte()
+  
 ```
 
 
@@ -1086,6 +1134,38 @@ pc_scores.v$cluster_hc3euc <- clusters_hc3euc
 
 
 ```
+##
+
+
+```{r}
+
+
+plot.new()
+
+
+hc_whisky.w <- hclust(dist_matrix, method = "ward.D2")
+
+
+
+plot(hc_whisky.w,
+     main = "Euclidian Hierarchical Clustering Dendrogram",
+     xlab = "Whisky Index",
+     ylab = "Height (Distance)",
+     hang = -1,                    # Align labels at bottom
+     labels = pc_scores.v$Label)  # Use descriptors as labels
+
+
+rect.hclust(hc_whisky.w, k = 3, border = c("indianred", "orange", "skyblue"))
+
+
+clusters_hc3euc.w <- cutree(hc_whisky.w, k = 3)
+pc_scores.v$cluster_hc3euc.w <- clusters_hc3euc.w
+
+
+
+
+```
+
 
 ##
 
@@ -1119,34 +1199,7 @@ pc_scores.v$cluster_hc3manh <- clusters_hc3manh
 
 ```
 
-##
 
-```{r}
-
-plot.new()
-
-dist_matrix2 <- dist(scale(logged.c.whisky[, -1]), method = "maximum")
-
-
-hc_whisky2 <- hclust(dist_matrix2, method = "complete")
-
-
-plot(hc_whisky2,
-     main = "Chebyshev Hierarchical Clustering Dendrogram",
-     xlab = "Whisky Index",
-     ylab = "Height (Distance)",
-     hang = -1,                    # Align labels at bottom
-     labels = pc_scores.v$Label)  # Use descriptors as labels
-
-
-rect.hclust(hc_whisky2, k = 3, border = c("indianred", "orange", "skyblue"))
-
-
-clusters_hc3max <- cutree(hc_whisky2, k = 3)
-pc_scores.v$cluster_hc3max <- clusters_hc3max
-
-
-```
 
 ##
 
@@ -1155,10 +1208,10 @@ pc_scores.v$cluster_hc3max <- clusters_hc3max
 
 plot.new()
 
-dist_matrix3 <- as.dist(1 - cor(t(scale(logged.c.whisky[-1]))))
+dist_matrix3 <- as.dist(1 - cor(t(logged.c.whisky[-1])))
 
 
-hc_whisky3 <- hclust(dist_matrix3, method = "complete")
+hc_whisky3 <- hclust(dist_matrix3, method = "ward.D2")
 
 
 plot(hc_whisky3,
@@ -1176,6 +1229,8 @@ clusters_hc3cor <- cutree(hc_whisky3, k = 3)
 pc_scores.v$cluster_hc3cor <- clusters_hc3cor
 
 ```
+
+
 
 ## Comparative quality: 
 
@@ -1307,12 +1362,13 @@ confusion_metric <- function(c_matrix) {
 ```{r}
 
 
+#kmean
 
 logged.w.plot$kmean <- scotch.kmean$km_results$`3`$cluster
 
 logged.w.plot$kmean <- factor(logged.w.plot$kmean,
                               levels = c(2, 3, 1),
-                              labels = c("1:Counterfeit", "2:Grain_Blend", "3:Provenance"))
+                              labels = c("Counterfeit", "Grain_Blend","Provenance"))
 
 kmean_c_matrix <- table(Predicted = logged.w.plot$kmean,
                           Actual = logged.w.plot$Provenance)
@@ -1325,21 +1381,21 @@ logged.w.plot$pam <- pam.scotch$pam_fit$`3`$clustering
 
 logged.w.plot$pam <- factor(logged.w.plot$pam,
                               levels = c(2, 1, 3),
-                              labels = c("1:Counterfeit", "2:Grain_Blend", "3:Provenance"))
+                              labels = c("Counterfeit", "Grain_Blend", "Provenance"))
 
 pam_c_matrix <- table(Predicted = logged.w.plot$pam,
                         Actual = logged.w.plot$Provenance)
 
 
 
-
+#manh, kmean, euc (ward)
 
 
 logged.w.plot$manh <- clusters_hc3manh
 
 logged.w.plot$manh <- factor(logged.w.plot$manh,
                             levels = c(2, 1, 3),
-                            labels = c("1:Counterfeit", "2:Grain_Blend", "3:Provenance"))
+                            labels = c("Counterfeit", "Grain_Blend", "Provenance"))
 
 manh_c_matrix <- table(Predicted = logged.w.plot$manh,
                       Actual = logged.w.plot$Provenance)
@@ -1357,31 +1413,53 @@ logged.w.plot$euc <- clusters_hc3euc
 
 logged.w.plot$euc <- factor(logged.w.plot$euc,
                              levels = c(2, 1, 3),
-                             labels = c("1:Counterfeit", "2:Grain_Blend", "3:Provenance"))
+                             labels = c("Counterfeit", "Grain_Blend", "Provenance"))
 
 euc_c_matrix <- table(Predicted = logged.w.plot$euc,
                        Actual = logged.w.plot$Provenance)
 
 
-```
-::::{.columns}
 
-::: {.column width="50%"}
+
+logged.w.plot$cor <- clusters_hc3cor 
+
+logged.w.plot$cor <- factor(logged.w.plot$cor,
+                            levels = c(2, 1, 3),
+                            labels = c("Counterfeit", "Grain_Blend", "Provenance"))
+
+corr_c_matrix <- table(Predicted = logged.w.plot$cor,
+                      Actual = logged.w.plot$Provenance)
+
+
+```
+::: {.panel-tabset}
+
+
+## Agreeing Clustering Results
 
 ```{r}
-kmean_c_matrix %>%
+
+manh_c_matrix %>%
   as.data.frame.matrix() %>%
   gt(rownames_to_stub = TRUE) %>%
   tab_header(
-    title = "K-means Clustering"
-  ) %>%
+  title = "Consensus Clustering Results",
+  subtitle = "K-means (k=3) and hierarchical(Manhattan [Complete & Ward], and Euclidean [Ward])"
+) %>%
   tab_stubhead(label = "Predicted") %>%
   cols_label(
     Counterfeit = "Counterfeit",
     Grain_Blend = "Grain/Blend",
     Provenance = "Provenance"
   )
+
 ```
+
+
+
+
+
+## PAM
 
 ```{r}
 pam_c_matrix %>%
@@ -1398,17 +1476,15 @@ pam_c_matrix %>%
   )
 ```
 
+## Correlation Agglomerative
 
-:::
-
-::: {.column width="50%"}
 ```{r}
 
-manh_c_matrix %>%
+corr_c_matrix %>%
   as.data.frame.matrix() %>%
   gt(rownames_to_stub = TRUE) %>%
   tab_header(
-    title = "Manhattan Hierarchical Clustering"
+    title = "Correlation (1-r) Hierarchical Clustering"
   ) %>%
   tab_stubhead(label = "Predicted") %>%
   cols_label(
@@ -1419,14 +1495,14 @@ manh_c_matrix %>%
 
 ```
 
+## Euclidian Agglomerative
 
 ```{r}
-
 euc_c_matrix %>%
   as.data.frame.matrix() %>%
   gt(rownames_to_stub = TRUE) %>%
   tab_header(
-    title = "Euclidian Hierarchical Clustering"
+    title = "Euclidean (complete) Hierarchical Clustering"
   ) %>%
   tab_stubhead(label = "Predicted") %>%
   cols_label(
@@ -1434,42 +1510,44 @@ euc_c_matrix %>%
     Grain_Blend = "Grain/Blend",
     Provenance = "Provenance"
   )
-
 ```
+
+
 
 :::
 
-::::
+
 
 ## Quality Metrics 
 
 ```{r}
-kmetric <- confusion_metric(kmean_c_matrix)
+
+cons.metric <- confusion_metric(manh_c_matrix)
 PAMmetric <- confusion_metric(pam_c_matrix)
-manhmetric <- confusion_metric(manh_c_matrix)
+cor.metric <- confusion_metric(corr_c_matrix)
 eucmetric <- confusion_metric(euc_c_matrix)
 
 clustering_comparison <- data.frame(
-  Method = c("K-means", "PAM", "Manhattan HC", "Euclidean HC"),
-  Overall_Accuracy = c(kmetric$globalqual_table$OAcc,
+  Method = c("Consensus", "PAM", "Correlation HC", "Euclidean HC"),
+  Overall_Accuracy = c(cons.metric$globalqual_table$OAcc,
                        PAMmetric$globalqual_table$OAcc,
-                       manhmetric$globalqual_table$OAcc,
+                       cor.metric$globalqual_table$OAcc,
                        eucmetric$globalqual_table$OAcc),
-  Average_Accuracy = c(kmetric$globalqual_table$AAcc,
+  Average_Accuracy = c(cons.metric$globalqual_table$AAcc,
                        PAMmetric$globalqual_table$AAcc,
-                       manhmetric$globalqual_table$AAcc,
+                       cor.metric$globalqual_table$AAcc,
                        eucmetric$globalqual_table$AAcc),
-  F1_Macro = c(kmetric$globalqual_table$F1_m,
+  F1_Macro = c(cons.metric$globalqual_table$F1_m,
                PAMmetric$globalqual_table$F1_m,
-               manhmetric$globalqual_table$F1_m,
+               cor.metric$globalqual_table$F1_m,
                eucmetric$globalqual_table$F1_m),
-  TNR_Macro = c(kmetric$globalqual_table$TNR_m,
+  TNR_Macro = c(cons.metric$globalqual_table$TNR_m,
                 PAMmetric$globalqual_table$TNR_m,
-                manhmetric$globalqual_table$TNR_m,
+                cor.metric$globalqual_table$TNR_m,
                 eucmetric$globalqual_table$TNR_m),
-  F1_Micro = c(kmetric$globalqual_table$F1_mu,
+  F1_Micro = c(cons.metric$globalqual_table$F1_mu,
                PAMmetric$globalqual_table$F1_mu,
-               manhmetric$globalqual_table$F1_mu,
+               cor.metric$globalqual_table$F1_mu,
                eucmetric$globalqual_table$F1_mu)
 )
 

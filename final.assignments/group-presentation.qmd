@@ -1,5 +1,5 @@
 ---
-title: "Uisge Beatha: Water of Life or Watered Down? Multivariate Methods for Whisky Class Differentiation"
+title: "Uisge Beatha: Water of Life or Watered Down? Applied Multivariate Methods in Scotch Differentiation"
 author: ""
 date: ""
 format:
@@ -195,7 +195,7 @@ p2.1 <- ggplot(data.frame(dMw), aes(x=dMw)) +
 grid.arrange(p1.1,p2.1, ncol = 2)
 ```
 
-## Assesment Mahalanobis Distribution
+## Assesment Mahalanobis Distances
 
 ::::{.columns}
 
@@ -280,7 +280,7 @@ surprise_df2 <- rbind(
 surprise_df2 %>%
   gt() %>%
   tab_header(
-    title = "Summary of Surprise Categories"
+    title = "Summary of Surprising Observations"
   ) %>%
   cols_label(
     Category = "Distance Category",
@@ -813,7 +813,7 @@ ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
 
 ::::{.columns}
 
-::: {.column width="70%"}
+::: {.column width="60%"}
 ```{r}
 
 #| label: kmean-clustering
@@ -844,8 +844,8 @@ ggplot(wss.scotch, aes(x = x, y = y)) +
   geom_line(linetype = "solid", color = "black") +
   theme_tufte() +
   geom_vline(xintercept = 3, linetype = "dashed", color = "red", linewidth = 1) +
-  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 109.43011, ymax = 161.11470, alpha = 0.3, fill = "indianred") +
-  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 39.52173, ymax = 109.43011, alpha = 0.2, fill = "coral") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 164.89678, ymax = 226.02211, alpha = 0.3, fill = "indianred") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 62.03422, ymax = 164.89678, alpha = 0.2, fill = "coral") +
   theme_tufte() +
   scale_x_continuous(limits = c(1, 10), breaks = 1:10) +  # set ticks 1 to 10
   scale_y_continuous(limits = c(0, 350)) +
@@ -861,10 +861,9 @@ ggplot(wss.scotch, aes(x = x, y = y)) +
 
 
 
-::: {.column width="30%"}
+::: {.column width="40%"}
 ```{r}
-scotch.kmean$km_results$`3`
-scotch.kmean$km_results$`4`
+
 
 kmeans_summary_t <- data.frame(
   Metric = c("Cluster Sizes", "Variance Explained", "Avg Silhouette", 
@@ -1548,6 +1547,14 @@ clustering_comparison <- data.frame(
   F1_Micro = c(cons.metric$globalqual_table$F1_mu,
                PAMmetric$globalqual_table$F1_mu,
                cor.metric$globalqual_table$F1_mu,
+               eucmetric$globalqual_table$F1_mu),
+  TNR_Micro = c(cons.metric$globalqual_table$PPV_mu,
+               PAMmetric$globalqual_table$PPV_mu,
+               cor.metric$globalqual_table$PPV_mu,
+               eucmetric$globalqual_table$PPV_mu),
+   TPR_Micro = c(cons.metric$globalqual_table$F1_mu,
+               PAMmetric$globalqual_table$F1_mu,
+               cor.metric$globalqual_table$F1_mu,
                eucmetric$globalqual_table$F1_mu)
 )
 
@@ -1563,7 +1570,9 @@ clustering_comparison %>%
     Average_Accuracy = "Average Acc.",
     F1_Macro = "F1 (Macro)",
     TNR_Macro = "TNR (Macro)",
-    F1_Micro = "F1 (Micro)"
+    F1_Micro = "F1 (Micro)",
+    TNR_Micro = "TNR (Micro)",
+    TPR_Micro = "TPR (Micro)"
   ) %>%
   fmt_number(
     columns = -Method,

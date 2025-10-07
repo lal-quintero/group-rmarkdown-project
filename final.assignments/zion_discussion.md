@@ -1,15 +1,15 @@
 Method: \
 LDA alone may be used to detect counterfeits, if lower fidelity is desired. \
-(results pre cluster analysis identify some traits which may pick out whether a scotch could be counterfeit, or at the very least non-provenance) \
+(results pre cluster analysis identify some traits which may pick out whether a scotch could be counterfeit, or at the very least non-provenance) 
 
 Based on the LDA/clustering analysis, TXRF as a novel means of counterfeit detection appears to be a sound methodology with a reasonable degree of success and accuracy, when care is taken with distance selection, methodology and appropriate selection of number of clusters - varying results and levels of accuracy \
-This method could be applied to other types of liquor/alcohol, but would need to undergo the same exploratory analysis \
+This method could be applied to other types of liquor/alcohol, but would need to undergo the same exploratory analysis 
 
 Points of improvement for further studies: \
-Unsure if what we’re picking up on in some  \ 
+Unsure if what we’re picking up on in some \
 Grains are the weakest group in terms of identification across the board: grains/blends may be more likely to be misclassified as counterfeit, rather than misclassified as provenance. This could mean some explanatory variables, such as the age of the whisky (as provenance whiskies are long aged, while grain and blends are typically younger in age) \
 Regionality may also be something indicated by TXRF results \
-Further and more varying data required to look into these ideas. \ 
+Further and more varying data required to look into these ideas. 
 
 TODO:
 - [ ] Incorporate overview, aims, and hypothesis response as a structure to the discussion, and answer/respond to each using relevant data points and observations

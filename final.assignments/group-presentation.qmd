@@ -48,6 +48,7 @@ library(DT)
 library(MVN)
 library(plotly)
 library(htmlwidgets)
+library(biotools)
 
 
 # Create the whisky data as a dataframe
@@ -117,12 +118,93 @@ whiskyclass.melt <- melt(data= class_whisky,
 
 
 ## Introduction {background-image="barrels.jpeg" background-opacity="0.3"}
-In this slide we'll discuss why were doing what were doing; we want to confirm this novel method of XTRF analysis in detecting counterfeits and whisky provenance using multivariate cluster analysis
+
+Multivariate Analysis of Scotch Whisky by Total Reflection X-ray Fluorescence and
+Chemometric methods: A Potential Tool in the Identification of Counterfeits
+
+Shand et al. (2017)
+
+::: {style="font-size: 65%;"}
+- Shand et al. (2017) aimed to potentially determine authenticity and provenance of scotch via it's elemental composition using a novel technique, TXRF
+- TXRF detection limits are 3 to 4 orders more sensitive than XRF, is more affordable and can quantify trace elements including metals and non-metals
+- Chemometric sampling and multivariate analysis using XTRF and has been applied to wine and other spirits for authentication and origin discrimination, though not to scotch
+- Elemental constitution is influenced by many factors including grain and water composition, production processes and maturation time
+
+:::
+
+## Whisky Samples {background-image="barrels.jpeg" background-opacity="0.3"}
+
+::::{.columns}
+
+::: {.column width="50%"}
 
 
-# Methods
+::: {style="font-size: 75%;"}
 
-##
+- 32 Whiskies, 7 Classes:
+  - 5 Counterfeits
+- Primarily grain composed:
+  - 8 Blends
+  - 2 Grains
+- Malt composed and regional:
+  - 2 Highland
+  - 2 Lowland
+  - 4 Island
+  - 9 Speyside
+  
+:::
+
+:::
+
+::: {.column width="50%"}
+
+
+:::
+
+::::
+
+## Trace Elements {background-image="barrels.jpeg" background-opacity="0.3"}
+
+
+
+
+::::{.columns}
+
+::: {.column width="50%"}
+
+- 11 Trace Elements (Mg/L)
+- Associated with whisky production
+- Concentrations generally above TRXF detectable limits
+- Some evidence has shown Cu capable of distinguishing malt whiskies from blends
+
+:::
+
+::: {.column width="50%"}
+
+::: {style="font-size: 75%;"}
+
+ - Cu (Copper)
+ - Zn (Zinc)
+ - Fe (Iron)
+ - Ca (Calcium)
+ - S  (Sulfur)
+ - Cl (Chlorine)
+ - K  (Potassium)
+ - Mn (Manganese)
+ - P  (Phosphorous)
+ - Rb (Rubidium)
+ - Br (Bromine)
+
+:::
+
+:::
+
+::::
+
+
+
+## Data Used
+
 
 ```{r}
 
@@ -138,14 +220,56 @@ whisky_data %>%
     decimals = 3
   ) %>%
   tab_options(
-    table.font.size = px(12),   # shrink font
-    data_row.padding = px(1)    # tighter row spacing
+    table.font.size = px(11),  
+    data_row.padding = px(1)    
   )
 
 
 
 ```
 
+## Summary of Trace Elements
+
+```{r}
+whisky_summary <- whisky_data %>%
+  dplyr::summarise(
+    dplyr::across(
+      .cols = where(is.numeric),
+      .fns = list(
+        Mean = ~mean(.x, na.rm = TRUE),
+        Median = ~median(.x, na.rm = TRUE),
+        SD   = ~sd(.x, na.rm = TRUE),
+        Min  = ~min(.x, na.rm = TRUE),
+        Max  = ~max(.x, na.rm = TRUE)
+      ),
+      .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  tidyr::pivot_longer(
+    cols = everything(),
+    names_to = c("Variable", ".value"),
+    names_sep = "_"
+  )
+
+# print summary table
+whisky_summary %>%
+  knitr::kable(
+    caption = "Summary Statistics for Whisky Chemical Variables",
+    digits = 3,
+    booktabs = TRUE
+  ) %>%
+  kableExtra::kable_styling(
+    latex_options = c("scale_down", "HOLD_position"),
+    font_size = 16
+  ) 
+```
+
+::: {style="font-size: 70%;"}
+- Large differences in observation range and scale (up to $10^4$)
+- Overall: Minimum (Rb) = 0.006, Maximum (K) = 37.7
+- Relatively large differences between median and mean in some variables, indicating higher variability
+
+:::
 
 ## Initial viewing:
 
@@ -195,7 +319,8 @@ p2.1 <- ggplot(data.frame(dMw), aes(x=dMw)) +
 grid.arrange(p1.1,p2.1, ncol = 2)
 ```
 
-## Assesment Mahalanobis Distances
+## Assesment Multivariate Normal Distribution
+
 
 ::::{.columns}
 
@@ -231,7 +356,7 @@ noclass_whisky2$surprise <- cut(noclass_whisky2$dMw,
                                 breaks= c(0, upper.quantiles.w, Inf),
                                 labels=c("Typical", "Somewhat", "Surprising", "Very"))
 
-library(MVN)
+
 mvn.test <- mvn(noclass_whisky)
 
 
@@ -307,6 +432,14 @@ ggpairs(noclass_whisky2[noclass_whisky2$surprise != "Somewhat", ], columns=1:11,
   ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
 ```
 
+::: {style="font-size: 70%;"}
+- Somewhat surprising observations omitted as too few to calculate a density (1)
+- **Orange** denotes surprising observations ($0.95 < d_M < 0.99$)
+- **Red** denotes very surprising observations ($d_M > 0.99$)
+
+:::
+
+
 ## Post log-transformation
 
 ```{r}
@@ -352,7 +485,7 @@ mah.plot2 <- ggplot(data.frame(l.dMw), aes(x=l.dMw)) +
 grid.arrange(log.box, mah.plot2, ncol = 2)
 ```
 
-## Assesment Log-transformed Mahalanobis Distribution
+## Reassessment Multivariate Normal Distribution
 
 ::::{.columns}
 
@@ -386,7 +519,7 @@ noclass_whisky2$surprise <- cut(noclass_whisky2$dMw,
                                 labels=c("Typical", "Somewhat", "Surprising", "Very"))
 
 
-mvn.test2 <- mvn(nc_whisky.log)
+mvn.test2 <- mvn((nc_whisky.log))
 
 
 
@@ -470,6 +603,12 @@ ggpairs(filtered_data, columns=1:11,
   ggplot2::theme(axis.text.x = element_text(angle=90, hjust=1))
 ```
 
+::: {style="font-size: 70%;"}
+- **Orange** denotes somewhat surprising observations ($0.90 < d_M < 0.95$)
+- 9 out of 11 variables displayed univariate normality
+- Zn ($A^2 = 0.872, p = 0.022$) and Br ($A^2 = 1.075, p=0.007$) displayed significant deviations via Anderson-Darling test 
+:::
+
 ## Structure examination
 
 ::::{.columns}
@@ -485,6 +624,9 @@ ggcorrplot(cor(log(class_whisky[,-(1)])),
            hc.order = TRUE,
            type = "lower")
 ```
+
+- **Strong positive** correlations K, Rb; Mn, Rb; Mn, K 
+- Moderate correlations throughout elsewhere
 
 :::
 
@@ -642,6 +784,7 @@ b.cor <- ggcorrplot(cor(blend_data[, -c(1, 13)]),
 :::: {.columns}
 
 ::: {.column width="33%"}
+
 ### Provenance
 ```{r}
 #| fig-width: 7
@@ -649,6 +792,14 @@ b.cor <- ggcorrplot(cor(blend_data[, -c(1, 13)]),
 #| out-width: "100%"
 p.cor
 ```
+
+
+::: {style="font-size: 60%;"}
+
+- All positive correlations, weak-strong
+- $n=17$
+
+:::
 
 :::
 
@@ -661,6 +812,12 @@ p.cor
 c.cor
 ```
 
+::: {style="font-size: 60%;"}
+
+- Moderate Fe and other negative correlations
+- $n=5$
+::: 
+
 :::
 
 ::: {.column width="33%"}
@@ -671,51 +828,33 @@ c.cor
 #| out-width: "100%"
 b.cor
 ```
+
+::: {style="font-size: 60%;"}
+
+- Maximum correlations less than other groups
+- $n= 10$
+:::
+
+
 :::
 
 
 ::::
 
-## Differentiation within the PCA Space
-```{r}
-PCA.whisky.log <- prcomp(scale.log.w[,-(1)], center = FALSE, scale = FALSE)
 
 
-logged.w.plot$sample <- as.factor(whisky_data$Sample_no)
-
-pc_scores <- data.frame(PCA.whisky.log$x[,1:3])
-
-pc_scores$groups <- logged.w.plot$Descriptor  
-
-pc_scores$groups2 <- logged.w.plot$Provenance  
-
-p1 <- plot_ly(pc_scores,
-              x = ~PC1, y = ~PC2, z = ~PC3,
-              color = ~groups2,
-              symbol = ~groups,
-              symbols = c('circle', 'square', 'diamond', 'cross', 'x', 'triangle-up', 'triangle-down'),
-              type = 'scatter3d',
-              mode = 'markers',
-              marker = list(size = 5)) %>%
-  layout(title = "3D PCA Space with Proposed Groups",
-         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
-                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
-                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
-
-p1
-
-```
-
-
-## Results: 
 
 ## PCA Analysis:
 
-
+::: {style="font-size: 50%;"}
+- Approximately 80% of variance is contained within the first three principal components
+:::
 
 ```{r}
 
 #| fig-height: 5
+
+PCA.whisky.log <- prcomp(scale.log.w[,-(1)], center = FALSE, scale = FALSE)
 
 pca_var <- data.frame(
   PC = paste0("PC", 1:length(PCA.whisky.log$sdev)),
@@ -728,7 +867,7 @@ ggplot(pca_var, aes(x = PC_num, y = Variance)) +
   geom_line(size = 1.5) +
   geom_point(size = 3) +
   geom_vline(xintercept = 3, linetype = "dashed", color = "red", linewidth = 1) +
-  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.08163043, ymax = 1.178, alpha = 0.2, fill = "coral") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.08163043, ymax = 1.17769561, alpha = 0.2, fill = "coral") +
   labs(x = "Principal Component",
        y = "Variance Explained") +
   scale_x_continuous(breaks = 1:nrow(pca_var)) +
@@ -736,6 +875,19 @@ ggplot(pca_var, aes(x = PC_num, y = Variance)) +
 ```
 
 ```{r}
+
+
+
+
+logged.w.plot$sample <- as.factor(whisky_data$Sample_no)
+
+pc_scores <- data.frame(PCA.whisky.log$x[,1:3])
+
+pc_scores$groups <- logged.w.plot$Descriptor  
+
+pc_scores$groups2 <- logged.w.plot$Provenance  
+
+
 log.whisky.summary <- summary(PCA.whisky.log)
 log.whisky.summary$importance %>%
   as.data.frame() %>%
@@ -751,7 +903,7 @@ log.whisky.summary$importance %>%
 ```
 
 
-##
+## PCA Loadings
 
 ::::{.columns}
 
@@ -804,9 +956,107 @@ ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
   theme_tufte()
 ```
 
+::: {style="font-size: 60%;"}
+- **PC1** primarily influenced by positive loadings of **P, Cl, K, Mn, Fe, Cu, Rb**
+- **PC2** primarily influenced by positive loadings of **S, Br, Ca** and negative loadings **Cu, Mn**
+- PC3 differentiates groups by various positive and negative inputs 
+:::
+
 :::
 
 ::::
+
+## Differentiation within the PCA Space
+
+```{r}
+
+p1 <- plot_ly(pc_scores,
+              x = ~PC1, y = ~PC2, z = ~PC3,
+              color = ~groups2,
+              symbol = ~groups,
+              symbols = c('circle', 'square', 'diamond', 'cross', 'x', 'triangle-up', 'triangle-down'),
+              type = 'scatter3d',
+              mode = 'markers',
+              marker = list(size = 5)) %>%
+  layout(title = "3D PCA Space with Proposed Groups",
+         scene = list(xaxis = list(title = paste0("PC1 (", round(summary(PCA.whisky.log)$importance[2,1]*100, 1), "%)")),
+                      yaxis = list(title = paste0("PC2 (", round(summary(PCA.whisky.log)$importance[2,2]*100, 1), "%)")),
+                      zaxis = list(title = paste0("PC3 (", round(summary(PCA.whisky.log)$importance[2,3]*100, 1), "%)"))))
+
+p1
+
+```
+
+## Linear Discriminant Analysis
+
+::: {style="font-size: 50%;"}
+- Shand et al. (2017) conducted an LDA using the given whisky groups within the first 3 principal components
+- **Homogeneity of covariance** matrices couldn't be established as the smallest group sizes ($n=2$) were smaller than predictors ($p=3$), and the covariance matrices thus singular
+- Established correlation plots suggests differing covariance matrices, at least for counterfeits
+- Using the first three principal components and aggregated groups, a global BoxM test indicated **significant covariance matrix heterogeneity** and ($X^2_{12}, p = 0.041$), and thus did not proceed with an LDA
+
+:::
+
+```{r}
+
+# Extract first 3 PC scores (what you used for LDA)
+pc_scores_lda2 <- data.frame(PCA.whisky.log$x[, 1:3])
+pc_scores_lda2$group <- logged.w.plot$Provenance
+
+# Box's M test providence 
+overall.pc.box2<-boxM(pc_scores_lda2[, 1:3], pc_scores_lda2$group)
+
+
+##prov.counter
+prov.count12 <- droplevels(subset(pc_scores_lda2,group=="Provenance" | group=="Counterfeit"))
+
+
+bMpc<- boxM(prov.count12[, 1:3],prov.count12$group)
+
+
+
+#bg.c
+
+bg.count12 <- droplevels(subset(pc_scores_lda2,group=="Grain_Blend" | group=="Counterfeit"))
+
+
+bMc.bg <- boxM(bg.count12[, 1:3],bg.count12$group)
+
+# grain and spey
+
+bg.prov <- droplevels(subset(pc_scores_lda2,group=="Grain_Blend" | group=="Counterfeit"))
+
+
+bMp.bg <-boxM(bg.prov[, 1:3],bg.prov$group)
+
+
+
+
+boxm_results <- tibble(
+  Comparison = c(
+    "Global Test",
+    "Provenance vs Counterfeit",
+    "Grain/Blend vs Counterfeit",
+    "Grain/Blend vs Provenance"
+  ),
+  Chi_Sq = c(21.706, 11.457, 14.066, 14.066),
+  df = c(12, 6, 6, 6),
+  p_value = c(0.04095, 0.07523, 0.02891, 0.02891)
+)
+
+# Create gt table
+boxm_results %>%
+  gt() %>%
+  tab_header(
+    title = md("**Box's M-test for Homogeneity of Covariance Matrices**")
+  ) %>%
+  fmt_number(
+    columns = vars(Chi_Sq, p_value),
+    decimals = 3
+  ) 
+  
+
+```
 
 
 ## Kmeans Assesment:
@@ -857,6 +1107,14 @@ ggplot(wss.scotch, aes(x = x, y = y)) +
         axis.text.x = element_text(face = "italic"))
 
 ```
+
+::: {style="font-size: 50%;"}
+- **Elbow plot** showing k-means clustering results for $k = 1$–$10$, using Euclidean distance and the Hartigan–Wong algorithm
+- **Dashed red line** marks the visually identified optimal cluster number at $k = 3$, based on the diminishing returns in variance reduction. 
+- **Dark red shading** represents the 37.37% of total variance explained by $k = 3$ choice relative to further increases in $k$.
+
+:::
+
 :::
 
 
@@ -899,35 +1157,22 @@ kmeans_summary_t %>%
 
 ## Silhouettes:
 
-::::{.columns}
 
-::: {.column width="50%"}
 ```{r}
+
 kmean.w.sil3 <- silhouette(scotch.kmean$km_results$`3`$cluster, dist(scale.log.w[,-1]))
 
-#generally decent clustering, except 2 = 0.19
-#which will likely be our blend/proveneance overlap
-plot(kmean.w.sil3,main = "K = 3", border=NA)
-
-
-```
-
-:::
-
-::: {.column width="50%"}
-```{r}
 
 kmean.w.sil4 <- silhouette(scotch.kmean$km_results$`4`$cluster, dist(scale.log.w[,-1]))
                                                                 
 
 
 
-plot(kmean.w.sil4,main = "K = 4", border=NA)
+par(mfrow = c(2,1), mar = c(5,4,2,2))
+plot(kmean.w.sil3, main = "Silhouette Plot (K = 3)", border = NA)
+plot(kmean.w.sil4, main = "Silhouette Plot (K = 4)", border = NA)
 ```
 
-:::
-
-::::
 
 ## Groupings in PC Space
 
@@ -1058,14 +1303,25 @@ pam4_summary %>%
 
 ::: {.column width="50%"}
 
-Your test here, point out pam similarities and differences from kmeans, 
-reinforcing k=3 as good
+::: {style="font-size: 60%;"}
+- Results consistent with k-means clustering at **$k=3$**
+ - Group 1 Medoid = 4, Blend (Dewars)
+ - Group 2 Medoid = 10, Counterfeit
+ - Group 3 Medoid = 18, Island (Bowmore)
+
+- Much poorer performance at **$k=4$**
+ - Worsened separation of group 1 and 2
+ - Large silhouette reductions at $k=4$ across groups
+ 
+- **Due to robustness in performance, set $k^*=3$**
+
+:::
 
 :::
 
 ::::
 
-##
+## PAM, k=3 in Principal Component Space
 
 ```{r}
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
@@ -1079,7 +1335,7 @@ geom_point(aes(shape = logged.w.plot$Provenance,
 
 ```
 
-## 
+## k = 4
 
 ```{r}
 
@@ -1619,8 +1875,10 @@ combined_tab %>%
 
 
 
-## Discussion:
+## Summary:
 
-Best method, LDA could be used as well to detect counterfeits if lower fidelity is desired. XTRF appears to be a sound method for discriminating malt, grain counterfeits across cluster type though care should be taken with hierarchical clustering in choosing an applicable distance, as results varied widely both in counterfeit discrimination as well as grain/blend and counterfeit discrimination.
+- **PAM clustering at $k = 3$ performed similarly well** as Shand et al.'s (2017) LDA results in identifying counterfeits
 
-More data/different data may be needed to truly discern providence. XTRF has been used to sample metals, compounds imparted by wood, etc; aging process may be more distinguishable than region as the main thing separating classes are chemicals ________, likely derived from whether the whisky is grain, malt (of providence) or a counterfeit (likely additives). Interestingly 2 island whiskies (______ and _______) were very distinct from all other samples, as seen in PC space and euclidian clustering 
+- **Strong agreement across clustering methods** indicates robustness of the XTRF approach for counterfeit detection in field applications
+
+- **Moderate to weak clustering performance** was observed for distinguishing between regional and blended/grain whisky categories

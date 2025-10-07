@@ -116,7 +116,7 @@ ie., whisky regionality is important for sales; whisky is one of top exports; ma
 
 ## Our Aims
 
-Reassesing/Using data already collected is both cost-saving and effective within acadamia when resources are limited. We used  @shand2017multivariate XTRF collected trace chem sampels from 7 whisky types. We did so to assess reproducability as well further applications of multivariaite analytical methods to this method of chemical sampling. If succesful and widely applicable, this presents a novel and cost affordable way to differentiate counterfeits, graina nd malt whiskies.
+Reassesing/Using data already collected is both cost-saving and effective within acadamia when resources are limited. We used  @shand2017multivariate XTRF collected trace chem sampels from 7 whisky types. We did so to assess reproducability as well further applications of multivariaite analytical methods to this method of chemical sampling. If succesful and widely applicable, this presents a novel and cost affordable way to differentiate counterfeits, grains and malt whiskies.
 
 ## Brief description Sharon et al., study
 
@@ -133,7 +133,7 @@ whisky_data %>%
     font_size = 9
   ) %>%
   kableExtra::footnote(
-    general = "Chemical concentrations reported in mg per L. All samples analyzed using total reflection X-ray fluorescence. Derived from Shand et al. 2017.",
+    general = "Chemical concentrations reported in mg per L. All samples analyzed using total reflection X-ray fluorescence (XTRF). Derived from Shand et al. 2017.",
     general_title = "Note:",
     footnote_as_chunk = TRUE
   )
@@ -146,13 +146,59 @@ As we wish to use all available data to retain maximum information, we wish to e
 Further, we wish to see if the data presents us with any compelling groups other than our pre-applied ones, we will aim at assessing data structure and seeing if groups emerging from cluster analysis agree.
 
 
-# Methods
+# EDA
 
 ## Exploratory Data Analysis (EDA)
 
-All data analysis were conducted in R version 4.4.3 [@R-base]. We initially assessed if the data derived from @shand2017multivariate (Table \@ref(tab:chemdata)) followed a multivariate normal distribution ($X \sim N_{11}(\mu, \Sigma)$) via visual comparisons of observation Mahalanobis distances ($d^2_M(X, \mu)$) to their expected quantiles and a QQ plot line (\@ref(fig:mah)), observation density plots by factor, as well as by conducting a Henze-Zirkler Test of Multivariate normality ($HZ = 1.325, p < 0.001$; \@ref(tab:mnorm)). As the data clearly did not conform to $X \sim N_{11}(\mu, \Sigma)$, we log transformed the observations and re-aplied the same analysis (\@ref(fig:mah); \@ref(tab:mnorm)) with results now conforming to $X \sim N_{11}(\mu, \Sigma)$ with no outliers ($d_M > 0.99$). This log-transformed data was henceforth used in this analysis.
 
 
+All data analysis were conducted in R version 4.4.3 [@R-base].  Summary statistics for whisky sample chemical trace TXRF data (Table \@ref(tab:chemdata)) show large differences in range and variability between trace chemical variables magnitude and variability (Table \@ref(tab:summary)). Variables show differences in the range of the magnitude $10^4$, with Rb displaying a range of 0.030 and K displaying a range of 36.964. When density plots of by-chemical observations were plotted, all displayed a strong right skew. Further, whisky class observations (n=32) were highly unbalanced (Grain = 2, Highland = 2, Lowland = 2, Island = 4, Counterfeit = 5, Blend = 8, Speyside = 9) across the observations of these 11  chemical variables (P, S, Cl, K, Ca, Mn, Fe, Cu, Zn, Br, Rb).
+
+```{r summary, echo =FALSE, warning=FALSE}
+
+whisky_summary <- whisky_data %>%
+  dplyr::summarise(
+    dplyr::across(
+      .cols = where(is.numeric),
+      .fns = list(
+        Mean = ~mean(.x, na.rm = TRUE),
+        Median = ~median(.x, na.rm = TRUE),
+        SD   = ~sd(.x, na.rm = TRUE),
+        Min  = ~min(.x, na.rm = TRUE),
+        Max  = ~max(.x, na.rm = TRUE)
+      ),
+      .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  tidyr::pivot_longer(
+    cols = everything(),
+    names_to = c("Variable", ".value"),
+    names_sep = "_"
+  )
+
+# print summary table
+whisky_summary %>%
+  knitr::kable(
+    caption = "Summary Statistics for Whisky Chemical Variables",
+    digits = 3,
+    booktabs = TRUE
+  ) %>%
+  kableExtra::kable_styling(
+    latex_options = c("scale_down", "HOLD_position"),
+    font_size = 9
+  ) %>%
+  kableExtra::footnote(
+    general = "Values represent mean, median, standard deviation (S.D.), and range (min–max) for each chemical element measured across all whisky samples.",
+    general_title = "Note:",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE
+  )
+
+```
+
+
+
+We initially assessed if the TXRF data derived from @shand2017multivariate (Table \@ref(tab:chemdata)) followed a multivariate normal distribution ($X \sim N_{11}(\mu, \Sigma)$) via visual comparisons of observation Mahalanobis distances ($d^2_M(X, \mu)$) to their expected quantiles and a QQ plot line (\@ref(fig:mah)), observation density plots by factor, as well as by conducting a Henze-Zirkler Test of Multivariate normality ($HZ = 1.325, p < 0.001$; \@ref(tab:mnorm)). As the data clearly did not conform to $X \sim N_{11}(\mu, \Sigma)$ and exhibited starkly different magnitudes in observations, we log transformed the observations and re-aplied the same analysis (\@ref(fig:mah); \@ref(tab:mnorm)). Results now conformed to $X \sim N_{11}(\mu, \Sigma)$ with no outliers ($d_M > 0.99$), and displayed distributions generally centered about 0. Anderson-Darling tests of univariate normality confirmed that 9 of the 11 chemical variables displayed normality while Zn ($A^2 = 0.872, p = 0.022$) and Br ($A^2 = 1.075, p=0.007$) displayed significant departures from. This log-transformed data was henceforth used in this analysis.
 
 
 ```{r mah, fig.cap="Mahalanobis histogram of multivariate density distribution of whisky observations with cutoff points marked at 0.90,0.95 and 0.99 density quantiles, overlaid with a chi-squared distribution kernel with 11 degrees of freedom. ", fig.align='center', fig.pos="H", echo=FALSE, warning=FALSE}
@@ -382,8 +428,9 @@ bind_rows(
 ```
 
 
+In @shand2017multivariate, an LDA analysis was conducted using the first 3 principal components. Due to highly imbalanced design of whisky class sampling, overall homogenity of whisky class covariance ($\Sigma_1 = \Sigma_2 = ... = \Sigma_7$) could not be established as the smallest classes (n = 2) are not $> p = 3$ and thus produced non-inheritable covariance matrices. Thus, combined with the small class sizes likely making supervised LDA training unstable or unsuitable, we believe that this rules out the suitability of this method of discriminant analysis.
 
-Due to @shand2017multivariate's inability to draw cohesive classification results at the regional level, we sought to allow the data as well as evidence og whisky type composition to intuitively guide our selection of the number of assigned clusters ($k^*$) in this analysis. We first viewed box-plots by variable class and the overall correlation structure of the chemical variables. Drawing upon these observations (\@ref(fig:box)), differential median trends emerged for varying whisky classes, particularly for variables Mn, Cu and Rb.We then isolated the chemical variable correlation structures of the largest classes available to visually assess and compared respective mean vector differences between these using Hotelling $T^2$ tests. 
+Due to @shand2017multivariate's likely unsuitable use of LDA and inability to draw cohesive classification results at the regional level, we sought to allow the data as well as evidence of whisky type composition to intuitively guide our selection of the number of assigned clusters ($k^*$) in this analysis. We first viewed box-plots by variable class and the overall correlation structure of the chemical variables. Drawing upon these observations (\@ref(fig:box)), differential median trends emerged for varying whisky classes, particularly for variables Mn, Cu and Rb.We then isolated the chemical variable correlation structures of the largest classes available to visually assess and compared respective mean vector differences between these using Hotelling $T^2$ tests. 
 
 ```{r box, fig.cap="Panel boxplots of log-transformed measurements of observations (mg/L) faceted by chemical (P, S, Cl, K, Ca, Mn, Fe, Cu, Zn, Br, Rb), with observations grouped by whisky type (Blend, Counterfeit, Grain, Highland, Lowland, Speyside, Island).", fig.align='center', fig.pos="H", echo=FALSE, warning=FALSE, message = FALSE}
 
@@ -403,9 +450,11 @@ log.box
 ```
 
 
-Counterfeits (Counterfeit, Speyside: $T^2$ = 7083, p = 0.009), Blends (Counterfeit, Blend: $T^2$ = 928,150, p = 0.009) and Speyside (Speyside, Blend: $T^2$ = 213.48, p = 0.026) whisky classes all displayed significant mean vector differences and visually differing correlation structures while Island and Speyside (Both single-region origin malted-barley whiskies) did not (Island, Speyside: $T^2$= 474, p = 0.042). Further, blended whiskies are composed primarily of grains (wheat or maize, 60-80%) with little malted-barley, while single origin whiskies are of only single-malt or multi-malt character [@storrie1962scotch; @bower2016scotch; @kew2016chemical; @SWACWG2021]. These differences appeared to be visually supported when observations were projected within three-dimensional principal component  (PC) space, with counterfeits completely linearly separable from all other observations.
+Counterfeits (Counterfeit, Speyside: $T^2$ = 7083, p = 0.009), Blends (Counterfeit, Blend: $T^2$ = 928,150, p = 0.009) and Speyside (Speyside, Blend: $T^2$ = 213.48, p = 0.026) whisky classes all displayed significant mean vector differences and visually differing correlation structures while Island and Speyside (Both single-region origin malted-barley whiskies) did not (Island, Speyside: $T^2$= 474, p = 0.042). Further, blended whiskies are composed primarily of grains (wheat or maize, 60-80%) with little malted-barley, while single origin whiskies are of only single-malt or multi-malt character [@storrie1962scotch; @bower2016scotch; @kew2016chemical; @SWACWG2021]. 
 
-Thus we re-aggregated the sampled whiskies into three logical overarching predictive whisky classes: "Counterfeits", "Grains & Blends" (a combination of grain and blended classes), and "Provenance" (all whiskies of a single-region origin). This reclassification is further supported as both grain type (barley vs. other) and region of production being shown to influence chemical composition of whiskies under other analytical methods [@kew2016chemical; @roullier2020influence].
+BoxM tests for the homogeneity of variances was unable to be performed within our feature space as all  class $n < p$, but correlation plots appeared to indicate likely differences in covariance matrices. However, these differences appeared to be visually supported when observations were projected within three-dimensional principal component  (PC) space, and counterfeits appeared completely linearly separable from all other observations.
+
+Thus we re-aggregated the sampled whiskies into three logical overarching predictive whisky classes: "Counterfeits" (n=5), "Grains & Blends" (a combination of grain and blended classes; n=10), and "Provenance" (all whiskies of a single-region origin; n=17). This reclassification is further supported as both grain type (barley vs. other) and region of production being shown to influence chemical composition of whiskies under other analytical methods, thus we should expect the regional fingerprint to be diluted within Grains & Blends [@kew2016chemical; @roullier2020influence].
 
 We then reassessed correlation plots of chemical observations for each of these three classes, as well as mean vector differences between them. We found striking correlation structure differences between the classes (particularly between counterfeit and provenance whiskies) as well as significant mean vector differences (\@ref(fig:cor); \@ref(tab:hotel)).
 
@@ -534,13 +583,13 @@ test_results2 %>%
   )
 ```
 
-This led us to conduct Principle Component Analysis (PCA) to ascertain the magnitude and directionality of each chemical driver within a reduced space, as to infer and categorize chemical differences between groups later drawn from cluster analysis. Principal components analysis was conducted via using the prcomp() function on our scaled, log-transformed data.
+This led us to conduct Principle Component Analysis (PCA) to ascertain the magnitude and directionality of each chemical driver within a reduced space, as to infer and categorize chemical differences between groups later drawn from cluster analysis. Principal components analysis was conducted via using the prcomp() function on our scaled, log-transformed data. We returned to @shand2017multivariate's LDA procedure with our newly aggregated classes, and performed a global BoxM test to assess the equality of variance matrices for by group for PC1-PC3, which we found to be heterogeneous ($X^2_{12}, p = 0.041$) and thus discarded LDA as an analysis option.
 
 As we wished to utilize all of the available data within our $n \ x \ p$ dimensional space, we implemented k-means, partitioning around medoids (PAM), and agglomerative hierarchical clustering to draw data-supported groups to test our predictive ones. In doing so, we scaled our log-transformed observations, except in the case of correlation distance hierarchical clustering which was conducted on the log-transformed data. Further, we wished to see if we could draw general consensus between these methods in support of using XTRF chemical composition sampling as a widely applicable method to produce suitable data for general multivariate analysis to categorize whiskies by counterfeit, blend, or single origin status. 
 
 ## K-means Unsupervised Clustering
 
-K-means analysis was conducted on the scaled-log transformed data using the kmeans() function with the default recommended Hartigan-Wong algorithm, iterations set to 100 (iter. max  = 100), and 50 random starts (nstart = 50) for all values of k. Setting random initializations to 50 reduces the chance of poor initial centroid allocation, while allowing 100 maximum iterations ensures convergence during the process of iterative group allocation of data points (ref). 
+K-means analysis was conducted on the scaled-log transformed data using the kmeans() function with the default recommended Hartigan-Wong algorithm, iterations set to 100 (iter. max  = 100), and 50 random starts (nstart = 50) for all values of k. Setting random initializations to 50 reduces the chance of poor initial centroid allocation, while allowing 100 maximum iterations ensures convergence during the process of iterative group allocation of data points *(ref)*. 
 
 This process was generated for $k = 1-10$, allowing $k^*$ to be chosen via visual assessment of total within sum of squares (WSS) reductions with concurrent silhouette plot analysis. 
 
@@ -560,18 +609,174 @@ After $k^*$ was established confusion matrices were produced for all clustering 
 
 ## PCA Analysis:
 
-The first two principal components contained 68.46% of the datasets vatiance within the principal compont space (S.D. - PC1 = 2.265, PC2 = 1.549; Variance explained - PC1 = 46.64%, PC2 = 21.82%). Third component explains 10.71% of variance, with rapidly decreasing proportions explained for following values (Fig y1; table y2). PC1 variance was composed by all positive loadings primarily from P = 0.31, Cl = 0.315, K = 0.404, Mn = 0.379, Fe = 0.310, Cu = 0.327, Zn = 0.241, and Rb = 0.415 with minor contributions from Br,Ca and S (<0.20). The largest loadings contributing to PC2 are those contributing little to PC1 such as Br (0.454), Ca (0.475) and S (0.534), with others generally having negative or small contributions. PC3 further differentiates the PC space with varying, large positive and negative inputs (table y2).
+The first two principal components contained 68.46% of the datasets vatiance within the principal compont space (S.D. - PC1 = 2.265, PC2 = 1.549; Variance explained - PC1 = 46.64%, PC2 = 21.82%). Third component explains 10.71% of variance, with rapidly decreasing proportions explained for following values (\@ref(fig:elbow); \@ref(tab:var)). 
 
-Within the PC space counterfeit samples are generally composed of positve PC2 scores (elevated levels of Br, Ca and S) and negative PC1 scores (reduced levels of the rest of the chemical trace elements). Inversely, most single-origin whiskies are characterized by positive PC1 scores (elevated levels of P, Cl, K, Mn, Fe, Cu, Zn) and negative PC2 scores (reduced levels of S, Br and S) with some variation. Blends and grains also are generally sit negatively below both the PC2 and PC1 abscissus and thus are primarily composed of low to average levels of most trace elements (fig y2).
+```{r elbow, fig.cap="Elbow plot of principal components (PC) and associated eigen values (variance).  The red line denotes where approximately 80% of the datas variance is contained (0.7916), with the remaining 20% associated with the red shading over PC 4-11", echo=FALSE, warning =FALSE}
 
-All groups exhibit bivariate normal distributions and positive correlations within the first two principal components space, though Blend & Grain whisky displays a weaker correlation.
+
+PCA.whisky.log <- prcomp(scale.log.w[,-(1)], center = FALSE, scale = FALSE)
+
+
+logged.w.plot$sample <- as.factor(whisky_data$Sample_no)
+
+pc_scores <- data.frame(PCA.whisky.log$x[,1:3])
+
+pc_scores$groups <- logged.w.plot$Descriptor  
+
+pc_scores$groups2 <- logged.w.plot$Provenance  
+
+
+
+logged.w.plot$sample <- as.factor(whisky_data$Sample_no)
+
+pc_scores <- data.frame(PCA.whisky.log$x[,1:3])
+
+pc_scores$groups <- logged.w.plot$Descriptor  
+
+pc_scores$groups2 <- logged.w.plot$Provenance  
+
+pca_var <- data.frame(
+  PC = paste0("PC", 1:length(PCA.whisky.log$sdev)),
+  Variance = PCA.whisky.log$sdev^2,
+  PC_num = 1:length(PCA.whisky.log$sdev)
+)
+
+ggplot(pca_var, aes(x = PC_num, y = Variance)) +
+  geom_line(size = 1.5) +
+  geom_point(size = 3) +
+  geom_vline(xintercept = 3, linetype = "dashed", color = "red", linewidth = 1) +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.08163043, ymax = 1.178, alpha = 0.2, fill = "coral") +
+    labs(x = "Principal Component",
+       y = expression(Variance~Explained~(Associated~(lambda)))) +
+  scale_x_continuous(breaks = 1:nrow(pca_var)) +
+  theme_tufte() +
+  theme(axis.title = element_text(size = 14),        
+        axis.text = element_text(size = 12),
+         axis.text.x = element_text(size = 12),    
+        axis.text.y = element_text(size = 12))
+
+```
+
+```{r var, echo=FALSE, warning=FALSE}
+log.whisky.summary <- summary(PCA.whisky.log)
+log.whisky.summary$importance %>%
+  as.data.frame() %>%
+  kable(digits = 4,
+        caption = "Standardized Log-data PCA Summary",
+        col.names = paste0("PC", 1:ncol(.))) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE,
+                position = "center")  %>%
+  kableExtra::footnote(
+    general = "Standardized Principal Components of the scaled log-transformed whisky trace chemical observations and their associated standard deviation, with proportional variance explained.",
+    general_title = "Note:",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE
+  )
+```
+PC1 variance was composed by all positive loadings primarily from P = 0.31, Cl = 0.315, K = 0.404, Mn = 0.379, Fe = 0.310, Cu = 0.327, Zn = 0.241, and Rb = 0.415 with minor contributions from Br,Ca and S (<0.20). The largest loadings contributing to PC2 are those contributing little to PC1 such as Br (0.454), Ca (0.475) and S (0.534), with others generally having negative or small contributions. PC3 further differentiates the PC space with varying, large positive and negative inputs (Table \@ref(tab:loading)).
+
+```{r loading, echo =FALSE,warning=FALSE}
+pc.makeup <- data.frame(PCA.whisky.log$rotation[,1:3])
+
+pc.makeup %>%
+  kable(digits = 3,
+        caption = "Principal Component Loadings: First Three Components",
+        col.names = c("PC1", "PC2", "PC3"),
+        align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE,
+                position = "center")%>%
+  kableExtra::footnote(
+    general = "Loading contributions of chemical variables to the first three standardized principal components of the scaled log-transformed whisky trace element observations.",
+    general_title = "Note:",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE
+  )
+```
+
+
+
+Within the PC space counterfeit samples are generally composed of positive PC2 scores (elevated levels of Br, Ca and S) and negative PC1 scores (reduced levels of the rest of the chemical trace elements). Inversely, most single-origin whiskies are characterized by positive PC1 scores (elevated levels of P, Cl, K, Mn, Fe, Cu, Zn) and negative PC2 scores (reduced levels of S, Br and S) with some variation. Blends and grains also are generally sit negatively below both the PC2 and PC1 abscissus and thus are primarily composed of low to average levels of most trace elements (Fig. \@ref(fig:biplot)).
+
+```{r biplot, fig.cap="Biplot within the first two principal components feature space with chemical variable loadings, with data points colored by group (provenance, blend/grain and counterfeit) and shapes associated by class (counterfeit, grain, blend, highland, lowland, speyside, island). Confidence ellipses represent group distribution estimated within one standard deviation based on a multivariate normal distribution.", echo=FALSE}
+
+
+logged.w.plot$sample <- as.factor(whisky_data$Sample_no)
+
+s.logged.w.plot <- logged.w.plot
+
+s.logged.w.plot[, 2:12] <- scale(s.logged.w.plot[, 2:12])
+
+ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
+         groups = s.logged.w.plot$Provenance,
+         ellipse = TRUE,
+         var.axes = TRUE) +
+  geom_point(aes(shape = s.logged.w.plot$Descriptor,
+                 color =s.logged.w.plot$Provenance), size = 4) +
+  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4))  +
+  geom_text(aes(label = logged.w.plot$sample),
+            size = 3, vjust = -1, hjust = 0.5) +
+  labs(color = "Whisky Group",
+       shape = "Whisky Type") +
+       guides(fill = "none") + 
+  theme_tufte()
+```
+
+
 
 
 ## K-means
 
-With the stated starting parameter metrics, we produced k-means clustering algorithmns using $k = 1,2,...,10$. We then extracted total within sum of squares (WSS) for each model, and via an elbow plot of WSS as a function of $k$, visually assesed a parsimonous $k^*$ candidate visually. The sharpest shift in proportional reduction of WSS occured at $k=3$, explaining 37.37% of all WSS composing the remaining variance reductions in $k = 2-10$ (fig y3). Extracted summary statistics for both $k=3$ and $k=4$ are presented in table y3, in which we can see that for $k=3$ 51.6% of variance is explained (Between SS/Total SS), the average silhouette width is 0.30, WSS = 164.9 and Between SS = 176.1. This shows moderate fit of clusters overrall and in comparison to $k=4$ displays a fairly equitable fit, though cluster size ($k=3$, 10,6,16; $k=4$, 8,2,6,16) indicates more balanced grouping by $k=3$ modelling as $k=4$ appears to isolate 2 points which are likely highly differentiated in our feature space from all observations; we will return to these later.
+With the stated starting parameter metrics, we produced k-means clustering algorithms using $k = 1,2,...,10$. We then extracted total within sum of squares (WSS) for each model, and via an elbow plot of WSS as a function of $k$, visually assessed a parsimonious $k^*$ candidate visually. The sharpest shift in proportional reduction of WSS occured at $k=3$, explaining 37.37% of all WSS composing the remaining variance reductions in $k = 2-10$ (Fig. \@ref(fig:scree)). Extracted summary statistics and average silhouette width for both $k=3$ and $k=4$ are presented in table (), in which we can see that for $k=3$ 51.6% of variance is explained (Between SS/Total SS), the average silhouette width is 0.30, WSS = 164.9 and Between SS = 176.1. This shows moderate fit of clusters overall and in comparison to $k=4$ displays a fairly equitable fit, though cluster size ($k=3$, 10,6,16; $k=4$, 8,2,6,16) indicates more balanced grouping by $k=3$ modelling as $k=4$ appears to isolate 2 points which are likely highly differentiated in our feature space from all observations (Island 18, Island 19).
 
-Silhoutte plots (fig y 4) indicate that for $k=3$ groups 2 ($S_2=0.36$) and 3 ($S_3=0.28$) have moderate fit, while group 1 ($S_1 = 0.15$) displays weak to insubstantial structure; only one observation (15 = young grain) displays a truly poor fit to a group ($S_i < 0$). Clustering comfortability remains similar for groups 1 and 3 when $k = 4$, but the 2 points forming a new group indicate a very tight, comfortable cluster (S_4=0.49; WSS 140.08) and $S_2$ is reduced to 0.30. This trade-off only reduces average silhouette width by 0.02, indicating that there is minimal reduction in group fit and that this is a feasable cluster model as well. 
+```{r scree, fig.cap="Elbow plot of k-means derived clusters for k = 1,2,..,10 using euclidian distance and the Hartigan-Wong algorithm. The dashed red line indicates likely optimal clustering at k=3, from visual assesment of proportion of variance reduced. Dark red shading indicates 37.37% of the variance explained from k=3 in comparison to every further group addition beyond k=3", echo=FALSE}
+
+kmeans_scotch.func <- function(data){
+  results <- list()
+  for (i in 1:10){
+    results[[as.character(i)]] <- kmeans(data,
+                                         centers=i, iter.max = 100, nstart = 50)
+
+  }
+
+  wss <- sapply(results, function(x) sum(x$withinss))
+
+  return(list(km_results = results, wss = wss))
+}
+
+scotch.kmean <- kmeans_scotch.func(scale.log.w[,-1])
+
+
+wss.scotch <- data.frame(y = scotch.kmean$wss, x = c(1:10))
+
+
+
+ggplot(wss.scotch, aes(x = x, y = y)) +
+  geom_point(color = "black", size = 3) +
+  geom_line(linetype = "solid", color = "black") +
+  theme_tufte() +
+  geom_vline(xintercept = 3, linetype = "dashed", color = "red", linewidth = 1) +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 164.89678, ymax = 226.02211, alpha = 0.3, fill = "indianred") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = 62.03422, ymax = 164.89678, alpha = 0.2, fill = "coral") +
+  theme_tufte() +
+  scale_x_continuous(limits = c(1, 10), breaks = 1:10) +  # set ticks 1 to 10
+  scale_y_continuous(limits = c(0, 350)) +
+  labs(
+    y = "Total Within Sum of Squares (WSS)",
+    x = "Number of Clusters (K)"
+  ) +
+  theme(axis.text = element_text(angle =45, size = 10),
+        axis.text.x = element_text(face = "italic"))
+
+```
+
+
+
+
+
+
+Silhoutte plots (fig y 4) indicate that for $k=3$ groups 2 ($S_2=0.36$) and 3 ($S_3=0.28$) have moderate fit, while group 1 ($S_1 = 0.15$) displays weak to insubstantial structure; only one observation (15 = young grain) displays a truly poor fit to a group ($S_i < 0$). Clustering comfortability remains similar for groups 1 and 3 when $k = 4$, but the 2 points forming a new group indicate a very tight, comfortable cluster (S_4=0.49; WSS 140.08) and $S_2$ is reduced to 0.30. This trade-off only reduces average silhouette width by 0.02, indicating that there is minimal reduction in group fit and that this is a feasible cluster model as well. 
 
 In fig y 5 we can see that indeed the fourth group is composed of 2 island observations which sit in a feature space characterized by both positive PC1 and PC2 scores, quite different from other group trends. This aligns with @shand2017multivariate's linear discriminant analysis (LDA) results utilizing the first three principal components, in which they were able to classify 2 out of 4 island whiskies correctly. For $k=3$ these observations are clustered along with 8 other single-origin whiskies, and all other cluster classifications remain the same. All five counterfeits have been correctly clustered, with one false positive which aligns with our poor fitting sample 15 (young grain). Further, all other grains and blends have been correctly classified into one group, but with 7 false positives of provenance whiskies also classified into that group. 
 

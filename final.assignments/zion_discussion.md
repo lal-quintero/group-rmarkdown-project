@@ -1,6 +1,15 @@
 ## Discussion points
 ##### For slides and paper
 
+So far: 
+From the multivariate methods we have applied to the Scotch whisky dataset, TXRF appears to be a sound method for differentiation between blends, grains, and counterfeits from whiskies of provenance. \
+LDA - as used in @shand2017multivariate  - can be used to detect counterfeits, if lower fidelity is desired, or for initial exploration of data. ((refer to correlation matrix and PC space, as it can be seen most clearly there)) \
+When performing cluster analysis - hierarchical clustering in particular - care should be taken in choosing an applicable distance. There was a wide variation of results both in counterfeit and grain/blend discrimination. \
+No method of clustering analysis incorrectly predicted a provenance whisky to be grain/blend or counterfeit, or predicted a counterfeit to be a provenance whisky. Across all forms of clustering analysis, grain/blends provide the most confusion for the model, with a higher likelihood of being misclassified as a provenance whisky, or in a handful of cases where counterfeits are incorrectly. \
+This increased confusion introduced by grain/blend whiskies suggests that counterfeits passing as them may be more likely to go undetected by counterfeit detection using this TXRF, giving counterfeiters an option of lower risk, lower reward. \
+This area of misclassification, and the moderate to weak clustering performance observed between regional and grain/blend whiskies also suggests that more or different data may be needed in order to truly discern provenance. Further investigation could include the age of the whisky as an added explanatory variable - provenance whiskies will usually be longer aged than grain/blend whiskies. \
+- [ ] Simplify each point into a short sentence for slides, long winded version for the speaker notes
+
 From overview: 
 - whisky regionality is important for sales
 - whisky is a major export, with a trade value in the [billions](https://wits.worldbank.org/trade/comtrade/en/country/ALL/year/2021/tradeflow/Exports/partner/WLD/product/220830)

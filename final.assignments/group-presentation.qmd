@@ -2,7 +2,6 @@
 title: "Uisge Beatha: Water of Life or Watered Down? Applied Multivariate Methods in Scotch Differentiation"
 author: ""
 date: ""
-bibliography: pres.bib
 format:
   revealjs:
     embed-resources: true
@@ -118,13 +117,12 @@ whiskyclass.melt <- melt(data= class_whisky,
 ```
 
 
-## Overview {background-image="casks.JPG" background-opacity="0.2"}
+## Introduction {background-image="barrels.jpeg" background-opacity="0.3"}
 
-::: {style="font-size: 80%;"}
 Multivariate Analysis of Scotch Whisky by Total Reflection X-ray Fluorescence and
-Chemometric methods: A Potential Tool in the Identification of Counterfeits (Shand et al., 2017)
-:::
+Chemometric methods: A Potential Tool in the Identification of Counterfeits
 
+Shand et al. (2017)
 
 ::: {style="font-size: 65%;"}
 - Shand et al. (2017) aimed to potentially determine authenticity and provenance of scotch via it's elemental composition using a novel technique, TXRF
@@ -134,40 +132,36 @@ Chemometric methods: A Potential Tool in the Identification of Counterfeits (Sha
 
 :::
 
-[Sources: @bunnahabhain2005; @kew2016chemical; @shand2017multivariate; @roullier2020influence]{style="font-size: 0.5em;"}
+## Whisky Samples {background-image="barrels.jpeg" background-opacity="0.3"}
 
-## Aims {background-image="casks.JPG" background-opacity="0.2"}
+::::{.columns}
 
-- To establish literature and data driven clusters for Scotch differentiation, particularly for discriminating against counterfeits
-- To determine if results are consistent across methods, and thus suitability of scotch XTRF sampling to cluster analysis
-- Quantitatively compare results to Shand et al. (2017) 
-
-
-## Whisky Samples {background-image="casks.JPG" background-opacity="0.2"}
-
-
+::: {.column width="50%"}
 
 
 ::: {style="font-size: 75%;"}
 
 - 32 Whiskies, 7 Classes:
   - 5 Counterfeits
-- Primarily Grain Composed (often 60-80%):
+- Primarily grain composed:
   - 8 Blends
   - 2 Grains
-- Malt Composed and regional:
+- Malt composed and regional:
   - 2 Highland
   - 2 Lowland
   - 4 Island
   - 9 Speyside
   
-  
-  
 :::
 
-[Sources: @storrie1962scotch; @bunnahabhain2005; @bower2016scotch; @kew2016chemical; @shand2017multivariate; @SWACWG2021]{style="font-size: 0.4em;"}
+:::
+
+::: {.column width="50%"}
 
 
+:::
+
+::::
 
 ## Trace Elements {background-image="barrels.jpeg" background-opacity="0.3"}
 
@@ -178,14 +172,10 @@ Chemometric methods: A Potential Tool in the Identification of Counterfeits (Sha
 
 ::: {.column width="50%"}
 
-::: {style="font-size: 80%;"}
 - 11 Trace Elements (Mg/L)
 - Associated with whisky production
 - Concentrations generally above TRXF detectable limits
 - Some evidence has shown Cu capable of distinguishing malt whiskies from blends
-:::
- 
-[Sources: @bunnahabhain2005; @shand2017multivariate]{style="font-size: 0.4em;"}
 
 :::
 
@@ -270,7 +260,7 @@ whisky_summary %>%
   ) %>%
   kableExtra::kable_styling(
     latex_options = c("scale_down", "HOLD_position"),
-    font_size = 17
+    font_size = 16
   ) 
 ```
 
@@ -644,8 +634,6 @@ ggcorrplot(cor(log(class_whisky[,-(1)])),
 
 ::: {.column width="40%"}
 
-- Mean vector ($\mu$) tests for groups with likely differences
-
 ```{r}
 
 #speyside vs blend, dif mean vectors
@@ -726,48 +714,6 @@ test_results2 <- data.frame(
   P_Value = c(2.162e-07, 0.000272, 0.04191)
 )
 
-
-
-
-```
-
-
-
-:::
-
-::::
-
-## Predictive Groups
-
-::::{.columns}
-
-::: {.column width="60%"}
-
-### Hints of structure
-
-::: {style="font-size: 70%;"}
-
-- **Literature:** 
- - Notes most blended whiskies are 60-80% grain
- - Malts frequently distinguishable from grains via chemometric analysis
- - Counterfeits can be distinguished from additives using spectrometry and congener detection 
-
-- **Data:**
- - Mean vectors varied significantly where was expected
- 
-
-[Sources: @storrie1962scotch; @adam2002investigations: @mcintyre2011detection; @bower2016scotch; @kew2016chemical; @aylott2022investigation;  @SWACWG2021]{style="font-size: 0.5em;"}
- 
-::: 
-
-
-
-:::
-
-::: {.column width="40%"}
-
-
-```{r}
 test_results2 %>%
   gt() %>%
   tab_header(
@@ -786,20 +732,13 @@ test_results2 %>%
     columns = P_Value,
     decimals = 3
   )
-```
 
-::: {style="font-size: 70%;"}
-- Generated 3 predictive aggregated classes from the original 7
- - **Provenance** (Lowland, Highland, Speyside, Island)
- - **Blends & Grains** (Blended and Grain)
- - **Counterfeits** 
-:::
+
+```
 
 :::
 
 ::::
-
-
 
 ## Whiskies of:
 ```{r}
@@ -892,7 +831,7 @@ b.cor
 
 ::: {style="font-size: 60%;"}
 
-- Maximum correlations weaker than other groups
+- Maximum correlations less than other groups
 - $n= 10$
 :::
 
@@ -1170,7 +1109,7 @@ ggplot(wss.scotch, aes(x = x, y = y)) +
 ```
 
 ::: {style="font-size: 50%;"}
-- **Elbow plot** showing k-means clustering results for $k = 1$–$10$, using Euclidean distance and the Hartigan–Wong algorithm (50 starts, 100 iterations)
+- **Elbow plot** showing k-means clustering results for $k = 1$–$10$, using Euclidean distance and the Hartigan–Wong algorithm
 - **Dashed red line** marks the visually identified optimal cluster number at $k = 3$, based on the diminishing returns in variance reduction. 
 - **Dark red shading** represents the 37.37% of total variance explained by $k = 3$ choice relative to further increases in $k$.
 
@@ -1223,29 +1162,15 @@ kmeans_summary_t %>%
 
 kmean.w.sil3 <- silhouette(scotch.kmean$km_results$`3`$cluster, dist(scale.log.w[,-1]))
 
+
 kmean.w.sil4 <- silhouette(scotch.kmean$km_results$`4`$cluster, dist(scale.log.w[,-1]))
-
-# Set up better plot dimensions and margins
-par(mfrow = c(1,2),  # 1 row, 2 columns
-    mar = c(5, 4, 3, 2),
-    cex.main = 1.2,
-    cex.lab = 1.0,
-    cex.axis = 0.9)
+                                                                
 
 
-# Plot with better formatting
 
-plot(kmean.w.sil3, 
-     main = "Silhouette Plot (K = 3)", 
-     border = NA,
-     col = c("indianred", "skyblue", "lightgreen")[1:3],  
-     cex.names = 0.8)      # Adjust cluster label size
-
-plot(kmean.w.sil4, 
-     main = "Silhouette Plot (K = 4)", 
-     border = NA,
-     col = c("indianred", "skyblue", "lightgreen", "goldenrod")[1:4],
-     cex.names = 0.8)
+par(mfrow = c(2,1), mar = c(5,4,2,2))
+plot(kmean.w.sil3, main = "Silhouette Plot (K = 3)", border = NA)
+plot(kmean.w.sil4, main = "Silhouette Plot (K = 4)", border = NA)
 ```
 
 
@@ -1286,6 +1211,7 @@ ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
 
 ## PAM Assesment
 
+### K = 3
 
 ```{r}
 
@@ -1395,15 +1321,14 @@ pam4_summary %>%
 
 ::::
 
-## PAM
-### k=3
+## PAM, k=3 in Principal Component Space
 
 ```{r}
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
          groups = as.factor(pam.scotch$pam_fit$`3`$clustering), ellipse = TRUE) +
-geom_point(aes(shape = logged.w.plot$Descriptor,
+geom_point(aes(shape = logged.w.plot$Provenance,
                color = as.factor(pam.scotch$pam_fit$`3`$clustering)), size = 4)  +
-  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4), name = "Descriptor") +
+  scale_shape_manual(values = c(15, 16, 17, 7), name = "Descriptor") +
   geom_text(aes(label = logged.w.plot$sample),
             size = 3, vjust = -1, hjust = 0.5) +
   theme_tufte()
@@ -1416,9 +1341,9 @@ geom_point(aes(shape = logged.w.plot$Descriptor,
 
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
          groups = as.factor(pam.scotch$pam_fit$`4`$clustering), ellipse = TRUE) +
-geom_point(aes(shape = logged.w.plot$Descriptor,
+geom_point(aes(shape = logged.w.plot$Provenance,
                color = as.factor(pam.scotch$pam_fit$`4`$clustering)), size = 4)  +
-  scale_shape_manual(values = c(15, 16, 17, 7, 8, 3, 4), name = "Descriptor") +
+  scale_shape_manual(values = c(15, 16, 17), name = "Descriptor") +
   geom_text(aes(label = logged.w.plot$sample),
             size = 3, vjust = -1, hjust = 0.5) +
   theme_tufte()
@@ -1428,10 +1353,7 @@ geom_point(aes(shape = logged.w.plot$Descriptor,
 
 ## Hierarchical Clustering Assesment:
 
-::: {style="font-size: 70%;"}
- Replication of Hierarchical Clustering
-:::
- 
+## Replication of Hierarchical Clustering
 ```{r}
 
 pc_scores.v <- as.data.frame(PCA.whisky.log$x[,1:2]) 
@@ -1467,7 +1389,7 @@ pc_scores.v$cluster_hc3euc <- clusters_hc3euc
 
 
 ```
-## 
+##
 
 
 ```{r}
@@ -1481,7 +1403,7 @@ hc_whisky.w <- hclust(dist_matrix, method = "ward.D2")
 
 
 plot(hc_whisky.w,
-     main = "Euclidian Distance Dendrogram",
+     main = "Euclidian Hierarchical Clustering Dendrogram",
      xlab = "Whisky Index",
      ylab = "Height (Distance)",
      hang = -1,                    # Align labels at bottom
@@ -1515,7 +1437,7 @@ hc_whisky4 <- hclust(dist_matrix4, method = "complete")
 
 
 plot(hc_whisky4,
-     main = "Manhattan Distance Dendrogram",
+     main = "Manhattan Hierarchical Clustering Dendrogram",
      xlab = "Whisky Index",
      ylab = "Height (Distance)",
      hang = -1,                    # Align labels at bottom
@@ -1548,7 +1470,7 @@ hc_whisky3 <- hclust(dist_matrix3, method = "ward.D2")
 
 
 plot(hc_whisky3,
-     main = "Correlation (1-r) Distance Dendrogram",
+     main = "r Distance Hierarchical Clustering Dendrogram",
      xlab = "Whisky Index",
      ylab = "Height (Distance)",
      hang = -1,                    # Align labels at bottom
@@ -1765,12 +1687,10 @@ corr_c_matrix <- table(Predicted = logged.w.plot$cor,
 
 
 ```
+::: {.panel-tabset}
 
 
-::::{.columns}
-
-::: {.column width="50%"}
-
+## Agreeing Clustering Results
 
 ```{r}
 
@@ -1779,7 +1699,7 @@ manh_c_matrix %>%
   gt(rownames_to_stub = TRUE) %>%
   tab_header(
   title = "Consensus Clustering Results",
-  subtitle = "K-means (k=3) and hierarchical (Manhattan [Complete & Ward] and Euclidean [Ward])"
+  subtitle = "K-means (k=3) and hierarchical(Manhattan [Complete & Ward], and Euclidean [Ward])"
 ) %>%
   tab_stubhead(label = "Predicted") %>%
   cols_label(
@@ -1793,6 +1713,8 @@ manh_c_matrix %>%
 
 
 
+
+## PAM
 
 ```{r}
 pam_c_matrix %>%
@@ -1809,11 +1731,7 @@ pam_c_matrix %>%
   )
 ```
 
-:::
-
-
-::: {.column width="50%"}
-
+## Correlation Agglomerative
 
 ```{r}
 
@@ -1832,7 +1750,7 @@ corr_c_matrix %>%
 
 ```
 
-
+## Euclidian Agglomerative
 
 ```{r}
 euc_c_matrix %>%
@@ -1849,9 +1767,9 @@ euc_c_matrix %>%
   )
 ```
 
-:::
 
-::::
+
+:::
 
 
 
@@ -1954,14 +1872,11 @@ combined_tab %>%
 
 ```
 
-
-
-
 ## Summary:
 
 - **PAM clustering at $k = 3$ performed similarly well** as Shand et al.'s (2017) LDA results in identifying counterfeits
 
-- **Strong agreement across clustering methods** indicates robustness of the XTRF approach for counterfeit detection in field applications using cluster analysis
+- **Strong agreement across clustering methods** indicates robustness of the XTRF approach for counterfeit detection in field applications
 
 - **Moderate to weak clustering performance** was observed for distinguishing between regional and blended/grain whisky categories
 
@@ -1969,7 +1884,7 @@ combined_tab %>%
 
 - TXRF as a novel means of counterfeit detection of Scotch whisky appears to be a sound method, with a reasonable degree of success and accuracy
 
-- Results comparable to LDA and better than euclidean hierarchical clustering as used in Shand et al. (2017)
+- LDA - as used in Shand et al. (2017) - can be used for counterfeit detection if lower fidelity is desired, or for initial exploration of data
 
 - Care must be taken with the selection of appropriate distances and number of clusters, as there are varying results and levels of accuracy in both counterfeit and grain/blend discrimination
 
@@ -1977,7 +1892,7 @@ combined_tab %>%
 
 - No method of cluster analysis incorrectly predicted provenance whiskies to be counterfeit, or vice versa
 
-- Grain & blend whiskies provide the most confusion in the model, with a higher likelihood of provenance misclassification to, and being misclassified as counterfeits
+- Grain/blend whiskies provide the most confusion in the model, with a higher likelihood of being misclassified as provenance, and counterfeits being misclassified as grain/blend
 
 - This confusion suggests counterfeits passing as grain/blend whiskies may be more likely to go undetected in TXRF analysis, making it a lower risk, lower reward option for counterfeiters
 
@@ -1986,13 +1901,7 @@ combined_tab %>%
 - The rate of grain/blend false negatives and positives, and the clustering performance observed between regional and grain/blend whiskies suggest more or different data may be needed to truly discern provenance. This could include:
 
   - Introducing the age of whisky as an added explanatory variable
-  - Taking samples of other metals and compounds introduced into the whisky during the aging process into account
+  - Taking samples of metals and compounds introduced into the whisky during the aging process into account - the aging process may be more distinguishable than regionality
 
 ## Sample Size
-
 - Shand et al. (2017) noted that this methodology should be used with caution due to the unbalanced design of the experiment, so further studies should look to increase the proportion of counterfeit samples included in the analysis
-
-## References {.smaller}
-
-::: {#refs}
-:::

@@ -700,7 +700,7 @@ kmeans_scotch.func <- function(data){
   return(list(km_results = results, wss = wss))
 }
 
-scotch.kmean <- kmeans_scotch.func(logged.c.whisky[,-1])
+scotch.kmean <- kmeans_scotch.func(scale(logged.c.whisky[,-1]))
 
 wss.scotch <- data.frame(y = scotch.kmean$wss, x = c(1:10))
 
@@ -713,7 +713,7 @@ ggplot(wss.scotch, aes(x = x, y = y)) +
   annotate("rect", xmin = -Inf, xmax = Inf, ymin = 109.43011, ymax = 45.42382, alpha = 0.2, fill = "coral") +
   theme_tufte() +
   scale_x_continuous(limits = c(1, 10), breaks = 1:10) +  # set ticks 1 to 10
-  scale_y_continuous(limits = c(0, 300)) +
+  scale_y_continuous(limits = c(0, 400)) +
   labs(
     y = "Total Within Sum of Squares (WSS)",
     x = "Number of Clusters (K)"
@@ -855,6 +855,7 @@ library(ggnewscale)
 
 #################################
 #### similar to PAM, pam seems better though
+
 ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
          groups = as.factor(scotch.kmean$km_results$`3`$cluster), ellipse = TRUE) +
   geom_point(aes(shape = logged.w.plot$Descriptor,
@@ -1868,7 +1869,7 @@ ggbiplot(PCA.whisky.log, obs.scale = 1, var.scale = 1,
 
 
 
-#2
+#2 providence
 # Extract first 3 PC scores (what you used for LDA)
 pc_scores_lda2 <- data.frame(PCA.whisky.log$x[, 1:3])
 pc_scores_lda2$group <- logged.w.plot$Provenance
@@ -1877,9 +1878,32 @@ pc_scores_lda2
 
 table(pc_scores_lda2$group)
 
-# Box's M test
+# Box's M test providence
 overall.pc.box2<-boxM(pc_scores_lda2[, 1:3], pc_scores_lda2$group)
 overall.pc.box2
+
+##spey count
+prov.count12 <- droplevels(subset(pc_scores_lda2,group=="Provenance" | group=="Counterfeit"))
+
+
+boxM(prov.count12[, 1:3],prov.count12$group)
+
+
+
+#island blend
+
+bg.count12 <- droplevels(subset(pc_scores_lda2,group=="Grain_Blend" | group=="Counterfeit"))
+
+
+boxM(bg.count12[, 1:3],bg.count12$group)
+
+# grain and spey
+
+bg.prov <- droplevels(subset(pc_scores_lda2,group=="Grain_Blend" | group=="Counterfeit"))
+bg.prov
+
+boxM(bg.prov[, 1:3],bg.prov$group)
+
 
 
 ##########################
@@ -1909,4 +1933,31 @@ overall.pc.box3<-boxM(pc_scores_binary[, 1:3], pc_scores_binary$group_binary)
 overall.pc.box3
 
 
+#
+s.whisky <- scale.log.w
 
+s.whisky$providence <- logged.w.plot$Provenance
+
+overall.all.box<-boxM(s.whisky[, 2:12], s.whisky$providence)
+overall.all.box
+
+#
+library(ggplot2)
+library(dplyr)
+
+# Extract only the PC scores for clustering
+
+
+# Run k-means with, e.g., 3 clusters
+pc_data <- pc_scores_lda3[, -4]
+
+kres <- kmeans(pc_data, centers = 3, nstart = 25)
+
+# Add cluster assignments back to the dataframe
+pc_scores_lda3$Cluster <- factor(kres$cluster)
+
+# Quick 2D plot: PC1 vs PC2
+ggplot(pc_scores_lda3, aes(x = PC1, y = PC2, color = Cluster, shape = group)) +
+  geom_point(size = 3) +
+  theme_minimal() +
+  labs(title = "K-means Clustering on First 3 PCs", color = "Cluster", shape = "True Group")

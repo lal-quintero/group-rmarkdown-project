@@ -1890,7 +1890,7 @@ combined_tab %>%
 
 ## Predictions and Classification
 
-- No method of cluster analysis incorrrectly predicted provenance whiskies to be counterfeit, or vice versa
+- No method of cluster analysis incorrectly predicted provenance whiskies to be counterfeit, or vice versa
 
 - Grain/blend whiskies provide the most confusion in the model, with a higher likelihood of being misclassified as provenance, and counterfeits being misclassified as grain/blend
 

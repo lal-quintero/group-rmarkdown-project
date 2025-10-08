@@ -1884,7 +1884,7 @@ combined_tab %>%
 
 - TXRF as a novel means of counterfeit detection of Scotch whisky appears to be a sound method, with a reasonable degree of success and accuracy
 
-- LDA - as used in @shand2017multivariate - can be used for counterfeit detection if lower fidelity is desired, or for initial exploration of data
+- LDA - as used in Shand et al. (2017) - can be used for counterfeit detection if lower fidelity is desired, or for initial exploration of data
 
 - Care must be taken with the selection of appropriate distances and number of clusters, as there are varying results and levels of accuracy in both counterfeit and grain/blend discrimination
 
@@ -1898,10 +1898,11 @@ combined_tab %>%
 
 ## Further Exploration:
 
-- The rate of grain/blend false negatives and positives, and the moderate to weak clustering performance observed between regional and grain/blend whiskies suggest more or different data may be needed to truly discern provenance. This could include:
+- The rate of grain/blend false negatives and positives, and the clustering performance observed between regional and grain/blend whiskies suggest more or different data may be needed to truly discern provenance. This could include:
 
+::: {style="font-size: 65%;"}
   - Introducing the age of whisky as an added explanatory variable
   - Taking samples of metals and compounds introduced into the whisky during the aging process into account - the aging process may be more distinguishable than regionality
-    - The main separator between classes is the inclusion/exclusion of specific elements eg an excess of sulphur in counterfeits, and a higher presence of copper, rubidium, etc, in provenance whiskies
+:::
 
-- @shand2017multivariate noted that this methodology should be used with caution due to the unbalanced design of the experiment, so further studies should look to increase the proportion of counterfeit samples included in the analysis
+- Shand et al. (2017) noted that this methodology should be used with caution due to the unbalanced design of the experiment, so further studies should look to increase the proportion of counterfeit samples included in the analysis

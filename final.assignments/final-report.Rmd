@@ -1560,6 +1560,10 @@ The moderate to weak clustering performance observed when distinguishing between
 different data would be required in order to more confidently make a distinction between these two groups, including the age of the whisky, and the aging process 
 used in production, as these would introduce different metals and compounds, and affect the trace element composition of whisky samples.
 
+For a stronger conclusion, an overall greater sample size, and a balanced proportion of samples for each group is recommended as noted in @shand2017multivariate. 
+The covariance matrix heterogeneity in LDA and the low average silhouette of the PAM clusters introduces some uncomfortability in our conclusions, which could 
+be strengthened with better sample sizes and a more balanced experimental design.
+
 Our success in detecting counterfeit whisky using TXRF, combined with its affordability and portability, 
 leads us to recommend it as a valid means of counterfeit detection in field applications, and would encourage further research into its use. 
 

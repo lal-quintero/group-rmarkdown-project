@@ -1536,8 +1536,32 @@ combined_tab %>%
 
 ```
 
-
-
 # Discussion
+
+Through multivariate analysis of the trace element measurements of Scotch whisky using TXRF, we have found it to be a sound 
+method for differentiating between counterfeits, blends and grains, and regional provenance whiskies. 
+
+We found LDA - as used in @shand2017multivariate - to be suitable for counterfeit detection in situations where lower fidelity is desired, 
+or for initial data exploration, but found it inappropriate to use for strong conclusions due to the covariance matrix heterogeneity introduced 
+by the small proportion of counterfeit samples in the data, and the overall low number of samples. 
+
+We examined multiple methods of cluster analysis, finding PAM clustering at k=3 to be the most successful at separating out counterfeits 
+from other whisky groups, while Euclidean distance with complete linkage used in @shand2017multivariate provides less reliable results. 
+We found using ward linkage provides results more aligned with our best performing models. The variation in clustering results suggests 
+that care should be taken when selecting appropriate distances and number of clusters, best seen in the hierarchical clustering.
+
+No method of clustering analysis incorrectly predicted a provenance whisky to be counterfeit, or a counterfeit to be of provenance, 
+indicating the success of this method for identifying counterfeits. The PAM clustering method identified counterfeits with 100% accuracy, 
+with mild confusion between blend/grain and provenance whiskies. The lower success of other clustering methods, identifying some blend/grains as counterfeits, 
+suggests that these counterfeits could be partly composed of these types of whiskies and various additives (@power2020brief). 
+This could further suggest that counterfeits being passed as blend/grains may be more likely to go undetected, compared to being passed as regional provenance whiskies.
+
+The moderate to weak clustering performance observed when distinguishing between blend/grain whiskies, and regional provenance whiskies would indicate that more or 
+different data would be required in order to more confidently make a distinction between these two groups, including the age of the whisky, and the aging process 
+used in production, as these would introduce different metals and compounds, and affect the trace element composition of whisky samples.
+
+Our success in detecting counterfeit whisky using TXRF, combined with its affordability and portability, 
+leads us to recommend it as a valid means of counterfeit detection in field applications, and would encourage further research into its use. 
+
 
 # Reference
